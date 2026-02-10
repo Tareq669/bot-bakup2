@@ -1,0 +1,87 @@
+const mongoose = require('mongoose');
+
+const groupSchema = new mongoose.Schema({
+  groupId: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true
+  },
+  groupTitle: String,
+  groupType: {
+    type: String,
+    enum: ['group', 'supergroup', 'channel'],
+    default: 'group'
+  },
+  settings: {
+    language: {
+      type: String,
+      default: 'ar'
+    },
+    welcomeMessage: String,
+    goodbyeMessage: String,
+    filterBadWords: {
+      type: Boolean,
+      default: true
+    },
+    floodProtection: {
+      type: Boolean,
+      default: true
+    },
+    lockLinks: {
+      type: Boolean,
+      default: false
+    },
+    lockMedia: {
+      type: Boolean,
+      default: false
+    }
+  },
+  admins: [
+    {
+      userId: Number,
+      username: String,
+      permissions: [String],
+      addedAt: Date
+    }
+  ],
+  bannedUsers: [
+    {
+      userId: Number,
+      reason: String,
+      bannedAt: Date,
+      bannedBy: Number
+    }
+  ],
+  warnings: [
+    {
+      userId: Number,
+      count: Number,
+      lastWarning: Date
+    }
+  ],
+  statistics: {
+    messagesCount: {
+      type: Number,
+      default: 0
+    },
+    membersCount: {
+      type: Number,
+      default: 0
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+module.exports = mongoose.model('Group', groupSchema);

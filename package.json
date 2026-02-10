@@ -1,0 +1,37 @@
+{
+  "name": "arab-telegram-bot",
+  "version": "1.0.0",
+  "description": "Advanced Arabic Telegram Bot with games, economy, content system, and group protection",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "arabic",
+    "games",
+    "economy"
+  ],
+  "author": "TareqFX",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.5.0",
+    "dotenv": "^16.3.1",
+    "https-proxy-agent": "^7.0.6",
+    "moment": "^2.29.4",
+    "mongodb": "^7.1.0",
+    "mongoose": "^7.5.0",
+    "node-cache": "^5.1.2",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^2.7.0",
+    "p-retry": "^7.1.1",
+    "socks-proxy-agent": "^8.0.5",
+    "telegraf": "^4.14.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

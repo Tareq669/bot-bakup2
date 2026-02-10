@@ -1,0 +1,171 @@
+const EconomyManager = require('../economy/economyManager');
+const Formatter = require('../ui/formatter');
+const Markup = require('telegraf/markup');
+const { User } = require('../database/models');
+
+class EconomyHandler {
+  static async handleBalance(ctx) {
+    try {
+      const user = await User.findOne({ userId: ctx.from.id });
+      if (!user) {
+        return ctx.reply('❌ لم يتم العثور على ملفك');
+      }
+
+      const message = Formatter.formatBalanceInfo(user);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('💸 تحويل', 'eco:transfer')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:economy')]
+      ]);
+
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      console.error('Error:', error);
+      ctx.reply('❌ حدث خطأ');
+    }
+  }
+
+  static async handleShop(ctx) {
+    try {
+      const items = EconomyManager.getShopItems();
+      let message = '🏪 المتجر\n\n';
+
+      items.forEach((item, index) => {
+        message += `${index + 1}. ${item.name} - ${item.price} عملة\n`;
+      });
+
+      const buttons = Markup.inlineKeyboard([
+        [
+          Markup.button.callback('1️⃣', 'shop:buy:1'),
+          Markup.button.callback('2️⃣', 'shop:buy:2'),
+          Markup.button.callback('3️⃣', 'shop:buy:3')
+        ],
+        [
+          Markup.button.callback('4️⃣', 'shop:buy:4'),
+          Markup.button.callback('5️⃣', 'shop:buy:5')
+        ],
+        [Markup.button.callback('⬅️ رجوع', 'menu:economy')]
+      ]);
+
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      console.error('Error:', error);
+      ctx.reply('❌ حدث خطأ');
+    }
+  }
+
+  static async handleBuyItem(ctx, itemId) {
+    try {
+      const result = await EconomyManager.buyItem(ctx.from.id, itemId);
+
+      if (result.success) {
+        await ctx.answerCbQuery('✅ تم الشراء بنجاح!');
+      } else {
+        await ctx.answerCbQuery(result.message);
+      }
+
+      await this.handleShop(ctx);
+    } catch (error) {
+      console.error('Error:', error);
+      ctx.reply('❌ حدث خطأ');
+    }
+  }
+
+  static async handleInventory(ctx) {
+    try {
+      const user = await User.findOne({ userId: ctx.from.id });
+      if (!user) {
+        return ctx.reply('❌ لم يتم العثور على ملفك');
+      }
+
+      let message = '📦 حقيبتك\n\n';
+
+      if (user.inventory.length === 0) {
+        message += '❌ حقيبتك فارغة';
+      } else {
+        user.inventory.forEach((item, index) => {
+          message += `${index + 1}. ${item.itemName} x${item.quantity}\n`;
+        });
+      }
+
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('⬅️ رجوع', 'menu:economy')]
+      ]);
+
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      console.error('Error:', error);
+      ctx.reply('❌ حدث خطأ');
+    }
+  }
+
+  static async handleDailyReward(ctx) {
+    try {
+      const result = await EconomyManager.claimDailyReward(ctx.from.id);
+
+      if (result.success) {
+        await ctx.reply(`🎁 ${result.message}`);
+      } else {
+        await ctx.reply(`⏰ ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      ctx.reply('❌ حدث خطأ');
+    }
+  }
+
+  static async handleEconomyStats(ctx) {
+    try {
+      const user = await User.findOne({ userId: ctx.from.id });
+      if (!user) {
+        return ctx.reply('❌ لم يتم العثور على ملفك');
+      }
+
+      // حساب الإحصائيات
+      const totalEarnings = user.totalEarnings || user.coins;
+      const totalSpending = user.totalSpending || 0;
+      const netProfit = totalEarnings - totalSpending;
+      const dailyAverage = Math.floor(totalEarnings / (Math.floor((new Date() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24)) || 1));
+
+      const message = `📊 <b>إحصائيات الاقتصاد</b>
+
+💰 <b>الرصيد الحالي:</b> ${user.coins.toLocaleString()} عملة
+
+📈 <b>الإحصائيات العامة:</b>
+• الإجمالي المكتسب: ${totalEarnings.toLocaleString()} عملة
+• الإجمالي المُنفق: ${totalSpending.toLocaleString()} عملة
+• الربح الصافي: ${netProfit.toLocaleString()} عملة
+• المتوسط اليومي: ${dailyAverage.toLocaleString()} عملة
+
+🏪 <b>نشاطك:</b>
+• عمليات الشراء: ${user.purchasesCount || 0}
+• التحويلات: ${user.transfersCount || 0}
+• الألعاب اللعوب: ${user.gamesPlayed?.total || 0}
+
+💎 <b>الترتيب:</b>
+• الثروة: قيد التحديث
+• الإنجازات: ${user.badges?.length || 0}`;
+
+      const buttons = Markup.inlineKeyboard([
+        [
+          Markup.button.callback('💰 الرصيد', 'eco:balance'),
+          Markup.button.callback('🏪 المتجر', 'eco:shop')
+        ],
+        [
+          Markup.button.callback('📦 الحقيبة', 'eco:inventory'),
+          Markup.button.callback('💸 تحويل', 'eco:transfer')
+        ],
+        [Markup.button.callback('⬅️ رجوع', 'menu:economy')]
+      ]);
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      ctx.reply('❌ حدث خطأ');
+    }
+  }
+}
+
+module.exports = EconomyHandler;
