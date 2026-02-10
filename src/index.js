@@ -1,5 +1,6 @@
 ﻿require('dotenv').config();
 const { Telegraf, Context, session } = require('telegraf');
+const express = require('express');
 const Database = require('./database/db');
 const CommandHandler = require('./commands/commandHandler');
 const MenuHandler = require('./commands/menuHandler');
@@ -1875,6 +1876,34 @@ async function startBot() {
     }, 10000);
   }
 }
+
+// ==========================================
+// HTTP SERVER FOR RENDER HEALTH CHECK
+// ==========================================
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Arab Telegram Bot is running!',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    bot: 'active',
+    database: 'connected',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.listen(PORT, () => {
+  logger.info(`🌐 HTTP Server running on port ${PORT}`);
+});
 
 // Start the bot
 startBot();
