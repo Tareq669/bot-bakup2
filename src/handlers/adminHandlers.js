@@ -69,10 +69,10 @@ class AdminHandlers {
       const isOwner = AdminHandlers.isOwner(ctx.from.id);
 
       await ctx.reply(
-        `🆔 <b>معلومات حسابك</b>\n\n` +
+        '🆔 <b>معلومات حسابك</b>\n\n' +
         `👤 الاسم: ${ctx.from.first_name || 'غير متوفر'}\n` +
         `🔢 Telegram ID: <code>${ctx.from.id}</code>\n` +
-        `👨‍💼 اليوزر: ${ctx.from.username ? '@' + ctx.from.username : 'غير متوفر'}\n` +
+        `👨‍💼 اليوزر: ${ctx.from.username ? `@${  ctx.from.username}` : 'غير متوفر'}\n` +
         `${isOwner ? '👑 <b>أنت مالك البوت</b>' : ''}`,
         { parse_mode: 'HTML' }
       );
@@ -96,13 +96,13 @@ class AdminHandlers {
       const ownerIds = (process.env.BOT_OWNERS || '').split(',').filter(Boolean).map(Number);
 
       await ctx.reply(
-        `👑 <b>مالكي البوت</b>\n\n` +
+        '👑 <b>مالكي البوت</b>\n\n' +
         `IDs: <code>${ownerIds.join(', ')}</code>\n\n` +
-        `📝 لإضافة مالك جديد:\n` +
-        `1. اطلب منه إرسال /myid للبوت\n` +
-        `2. أضف ID الخاص به في ملف .env\n` +
-        `3. BOT_OWNERS=ID1,ID2,ID3\n` +
-        `4. أعد تشغيل البوت`,
+        '📝 لإضافة مالك جديد:\n' +
+        '1. اطلب منه إرسال /myid للبوت\n' +
+        '2. أضف ID الخاص به في ملف .env\n' +
+        '3. BOT_OWNERS=ID1,ID2,ID3\n' +
+        '4. أعد تشغيل البوت',
         { parse_mode: 'HTML' }
       );
 
@@ -202,15 +202,15 @@ class AdminHandlers {
       const mongoose = require('mongoose');
       const dbStats = await mongoose.connection.db.stats();
 
-      const message = `🗄️ <b>معلومات قاعدة البيانات</b>\n\n` +
-        `📊 <b>الإحصائيات:</b>\n` +
+      const message = '🗄️ <b>معلومات قاعدة البيانات</b>\n\n' +
+        '📊 <b>الإحصائيات:</b>\n' +
         `• الاسم: ${mongoose.connection.db.databaseName}\n` +
         `• الحجم: ${(dbStats.dataSize / 1024 / 1024).toFixed(2)} MB\n` +
         `• حجم التخزين: ${(dbStats.storageSize / 1024 / 1024).toFixed(2)} MB\n` +
         `• عدد المستندات: ${dbStats.objects}\n` +
         `• المجموعات: ${dbStats.collections}\n` +
         `• الفهارس: ${dbStats.indexes}\n\n` +
-        `📡 <b>الاتصال:</b>\n` +
+        '📡 <b>الاتصال:</b>\n' +
         `• الحالة: ${mongoose.connection.readyState === 1 ? '✅ متصل' : '❌ غير متصل'}\n` +
         `• Host: ${mongoose.connection.host}`;
 
@@ -250,7 +250,7 @@ class AdminHandlers {
       const { User } = require('../database/models');
       const richest = await User.find().sort({ coins: -1 }).limit(10);
 
-      let message = `💰 <b>أغنى 10 مستخدمين</b>\n\n`;
+      let message = '💰 <b>أغنى 10 مستخدمين</b>\n\n';
       richest.forEach((u, i) => {
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
         message += `${medal} ${u.firstName}\n`;
@@ -295,9 +295,9 @@ class AdminHandlers {
 
       await ctx.answerCbQuery('✅ جاهز');
       await ctx.reply(
-        `🎁 <b>مكافأة جماعية</b>\n\n` +
-        `اكتب المبلغ الذي تريد إعطاءه لجميع المستخدمين:\n\n` +
-        `❌ اكتب /cancel للإلغاء`,
+        '🎁 <b>مكافأة جماعية</b>\n\n' +
+        'اكتب المبلغ الذي تريد إعطاءه لجميع المستخدمين:\n\n' +
+        '❌ اكتب /cancel للإلغاء',
         { parse_mode: 'HTML' }
       );
 
@@ -321,18 +321,18 @@ class AdminHandlers {
       const uptime = process.uptime();
       const memory = process.memoryUsage();
 
-      const message = `⚡ <b>حالة الأنظمة</b>\n\n` +
-        `🤖 <b>البوت:</b>\n` +
-        `• الحالة: ✅ يعمل\n` +
+      const message = '⚡ <b>حالة الأنظمة</b>\n\n' +
+        '🤖 <b>البوت:</b>\n' +
+        '• الحالة: ✅ يعمل\n' +
         `• وقت التشغيل: ${Math.floor(uptime / 60)} دقيقة\n` +
         `• PID: ${process.pid}\n\n` +
-        `💾 <b>الذاكرة:</b>\n` +
+        '💾 <b>الذاكرة:</b>\n' +
         `• المستخدمة: ${(memory.heapUsed / 1024 / 1024).toFixed(2)} MB\n` +
         `• المجموع: ${(memory.heapTotal / 1024 / 1024).toFixed(2)} MB\n` +
         `• RSS: ${(memory.rss / 1024 / 1024).toFixed(2)} MB\n\n` +
-        `🗄️ <b>قاعدة البيانات:</b>\n` +
+        '🗄️ <b>قاعدة البيانات:</b>\n' +
         `• الحالة: ${mongoose.connection.readyState === 1 ? '✅ متصل' : '❌ غير متصل'}\n\n` +
-        `📊 <b>Node.js:</b>\n` +
+        '📊 <b>Node.js:</b>\n' +
         `• الإصدار: ${process.version}\n` +
         `• المنصة: ${process.platform}`;
 
@@ -375,10 +375,10 @@ class AdminHandlers {
         lastActiveDay: { $lt: ninetyDaysAgo }
       });
 
-      const message = `🗑️ <b>تنظيف البيانات</b>\n\n` +
+      const message = '🗑️ <b>تنظيف البيانات</b>\n\n' +
         `المستخدمون الغير نشطين (أكثر من 90 يوم): ${inactiveCount}\n\n` +
-        `⚠️ هل تريد حذفهم؟\n\n` +
-        `⚠️ هذا الإجراء لا يمكن التراجع عنه!`;
+        '⚠️ هل تريد حذفهم؟\n\n' +
+        '⚠️ هذا الإجراء لا يمكن التراجع عنه!';
 
       const keyboard = Markup.inlineKeyboard([
         [
@@ -423,7 +423,7 @@ class AdminHandlers {
 
       await ctx.answerCbQuery(`✅ تم حذف ${result.deletedCount} مستخدم`);
       await ctx.editMessageText(
-        `✅ <b>تمت عملية التنظيف</b>\n\n` +
+        '✅ <b>تمت عملية التنظيف</b>\n\n' +
         `عدد المستخدمين المحذوفين: ${result.deletedCount}`,
         { parse_mode: 'HTML' }
       );

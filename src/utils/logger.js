@@ -41,7 +41,7 @@ class Logger {
   formatMessage(level, message, data = null) {
     const timestamp = new Date().toISOString();
     let logMessage = `[${timestamp}] [${level}] ${message}`;
-    
+
     if (data) {
       if (data instanceof Error) {
         logMessage += `\n${data.stack}`;
@@ -51,7 +51,7 @@ class Logger {
         logMessage += ` ${data}`;
       }
     }
-    
+
     return logMessage;
   }
 
@@ -67,7 +67,7 @@ class Logger {
         this.currentLogFile = currentFile;
       }
 
-      fs.appendFileSync(this.currentLogFile, message + '\n', 'utf8');
+      fs.appendFileSync(this.currentLogFile, `${message  }\n`, 'utf8');
     } catch (error) {
       console.error('Failed to write to log file:', error);
     }
@@ -152,7 +152,7 @@ class Logger {
     if (success) {
       this.info(message);
     } else {
-      this.warn(message + ' - FAILED');
+      this.warn(`${message  } - FAILED`);
     }
   }
 
@@ -166,7 +166,7 @@ class Logger {
   logApiCall(api, method, success, duration = null) {
     const message = `API Call: ${method} ${api}`;
     const data = { success, duration: duration ? `${duration}ms` : 'N/A' };
-    
+
     if (success) {
       this.info(message, data);
     } else {
@@ -183,7 +183,7 @@ class Logger {
    */
   logDatabase(operation, model, success, error = null) {
     const message = `DB ${operation} on ${model}`;
-    
+
     if (success) {
       this.info(message);
     } else {
@@ -203,7 +203,7 @@ class Logger {
       files.forEach(file => {
         const filePath = path.join(this.logsDir, file);
         const stats = fs.statSync(filePath);
-        
+
         if (now - stats.mtimeMs > maxAge) {
           fs.unlinkSync(filePath);
           this.info(`Deleted old log file: ${file}`);
@@ -221,10 +221,10 @@ class Logger {
    */
   getLogContent(date = null) {
     try {
-      const fileName = date 
+      const fileName = date
         ? path.join(this.logsDir, `bot-${date}.log`)
         : this.currentLogFile;
-      
+
       if (fs.existsSync(fileName)) {
         return fs.readFileSync(fileName, 'utf8');
       }

@@ -143,7 +143,7 @@ class GameHandlers {
       logger.logInteraction(ctx.from.id, 'quranic_game', { gameType });
 
       const QuranicGames = require('../games/quranicGames');
-      
+
       switch (gameType) {
         case 'gueverse':
           await QuranicGames.startGuessVerseGame(ctx);

@@ -4,7 +4,6 @@
  */
 
 const { logger } = require('../utils/logger');
-const { ERROR_MESSAGES } = require('../config/constants');
 
 // Lazy load AI modules
 let IntegratedAI, AnalyticsEngine, AIManager, LearningSystem, SmartNotifications;
@@ -57,9 +56,9 @@ class AIHandlers {
 
       const dashboard = await IntegratedAI.generateSmartDashboard(ctx.from.id);
       const formatted = IntegratedAI.formatSmartDashboard(dashboard);
-      
+
       await ctx.reply(formatted, { parse_mode: 'HTML' });
-      
+
       logger.logCommand('dashboard', ctx.from.id, true);
       logger.logInteraction(ctx.from.id, 'view_dashboard');
     } catch (error) {
@@ -82,9 +81,9 @@ class AIHandlers {
 
       const report = await AnalyticsEngine.generateUserReport(ctx.from.id);
       const formatted = AnalyticsEngine.formatReport(report);
-      
+
       await ctx.reply(formatted, { parse_mode: 'HTML' });
-      
+
       logger.logCommand('analytics', ctx.from.id, true);
       logger.logInteraction(ctx.from.id, 'view_analytics');
     } catch (error) {
@@ -106,9 +105,9 @@ class AIHandlers {
       }
 
       const message = await IntegratedAI.generateCoachingMessage(ctx.from.id);
-      
+
       await ctx.reply(message, { parse_mode: 'HTML' });
-      
+
       logger.logCommand('coaching', ctx.from.id, true);
       logger.logInteraction(ctx.from.id, 'receive_coaching');
     } catch (error) {
@@ -131,11 +130,11 @@ class AIHandlers {
 
       const { User } = require('../database/models');
       const user = await User.findOne({ userId: ctx.from.id });
-      
+
       if (user) {
         const motivation = IntegratedAI.generateMotivation(user);
         await ctx.reply(motivation, { parse_mode: 'HTML' });
-        
+
         logger.logCommand('motivation', ctx.from.id, true);
         logger.logInteraction(ctx.from.id, 'receive_motivation');
       } else {

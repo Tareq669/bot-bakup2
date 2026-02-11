@@ -9,9 +9,8 @@ const { ERROR_MESSAGES } = require('../config/constants');
 class ModerationHandlers {
   /**
    * Register all moderation handlers with the bot
-   * @param {Telegraf} bot - Telegraf bot instance
    */
-  static register(bot) {
+  static register() {
     // Note: Most moderation is handled through ModerationManager
     // This is a placeholder for future moderation action handlers
 
@@ -43,18 +42,18 @@ class ModerationHandlers {
   static async handleBan(ctx, userId, reason = 'غير محدد') {
     try {
       const hasPermission = await ModerationHandlers.hasModPermissions(ctx, ctx.chat.id);
-      
+
       if (!hasPermission) {
         return ctx.reply(ERROR_MESSAGES.NO_PERMISSION);
       }
 
       await ctx.telegram.banChatMember(ctx.chat.id, userId);
-      
-      logger.logInteraction(ctx.from.id, 'ban_user', { 
-        bannedUserId: userId, 
-        reason 
+
+      logger.logInteraction(ctx.from.id, 'ban_user', {
+        bannedUserId: userId,
+        reason
       });
-      
+
       await ctx.reply(`✅ تم حظر المستخدم\nالسبب: ${reason}`);
     } catch (error) {
       logger.error('Ban handler error:', error);
@@ -70,16 +69,16 @@ class ModerationHandlers {
   static async handleKick(ctx, userId) {
     try {
       const hasPermission = await ModerationHandlers.hasModPermissions(ctx, ctx.chat.id);
-      
+
       if (!hasPermission) {
         return ctx.reply(ERROR_MESSAGES.NO_PERMISSION);
       }
 
       await ctx.telegram.banChatMember(ctx.chat.id, userId);
       await ctx.telegram.unbanChatMember(ctx.chat.id, userId);
-      
+
       logger.logInteraction(ctx.from.id, 'kick_user', { kickedUserId: userId });
-      
+
       await ctx.reply('✅ تم طرد المستخدم');
     } catch (error) {
       logger.error('Kick handler error:', error);
@@ -96,25 +95,25 @@ class ModerationHandlers {
   static async handleMute(ctx, userId, duration = 3600) {
     try {
       const hasPermission = await ModerationHandlers.hasModPermissions(ctx, ctx.chat.id);
-      
+
       if (!hasPermission) {
         return ctx.reply(ERROR_MESSAGES.NO_PERMISSION);
       }
 
       const until = Math.floor(Date.now() / 1000) + duration;
-      
+
       await ctx.telegram.restrictChatMember(ctx.chat.id, userId, {
         permissions: {
           can_send_messages: false
         },
         until_date: until
       });
-      
-      logger.logInteraction(ctx.from.id, 'mute_user', { 
-        mutedUserId: userId, 
-        duration 
+
+      logger.logInteraction(ctx.from.id, 'mute_user', {
+        mutedUserId: userId,
+        duration
       });
-      
+
       await ctx.reply(`✅ تم كتم المستخدم لمدة ${Math.floor(duration / 60)} دقيقة`);
     } catch (error) {
       logger.error('Mute handler error:', error);
@@ -130,7 +129,7 @@ class ModerationHandlers {
   static async handleUnmute(ctx, userId) {
     try {
       const hasPermission = await ModerationHandlers.hasModPermissions(ctx, ctx.chat.id);
-      
+
       if (!hasPermission) {
         return ctx.reply(ERROR_MESSAGES.NO_PERMISSION);
       }
@@ -147,9 +146,9 @@ class ModerationHandlers {
           can_pin_messages: false
         }
       });
-      
+
       logger.logInteraction(ctx.from.id, 'unmute_user', { unmutedUserId: userId });
-      
+
       await ctx.reply('✅ تم إلغاء كتم المستخدم');
     } catch (error) {
       logger.error('Unmute handler error:', error);
@@ -166,30 +165,30 @@ class ModerationHandlers {
   static async handleWarn(ctx, userId, reason = 'غير محدد') {
     try {
       const hasPermission = await ModerationHandlers.hasModPermissions(ctx, ctx.chat.id);
-      
+
       if (!hasPermission) {
         return ctx.reply(ERROR_MESSAGES.NO_PERMISSION);
       }
 
       const { User } = require('../database/models');
       const user = await User.findOne({ userId });
-      
+
       if (user) {
         user.warnings = (user.warnings || 0) + 1;
         await user.save();
-        
-        logger.logInteraction(ctx.from.id, 'warn_user', { 
-          warnedUserId: userId, 
+
+        logger.logInteraction(ctx.from.id, 'warn_user', {
+          warnedUserId: userId,
           warnings: user.warnings,
-          reason 
+          reason
         });
-        
+
         await ctx.reply(
-          `⚠️ تحذير للمستخدم\n` +
+          '⚠️ تحذير للمستخدم\n' +
           `السبب: ${reason}\n` +
           `عدد التحذيرات: ${user.warnings}/3`
         );
-        
+
         // Auto-ban after 3 warnings
         if (user.warnings >= 3) {
           await ModerationHandlers.handleBan(ctx, userId, 'تجاوز عدد التحذيرات المسموح');

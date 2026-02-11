@@ -225,12 +225,12 @@ class ContentHandlers {
   static async handleQGamesCommand(ctx) {
     try {
       logger.logCommand('qgames', ctx.from.id);
-      
+
       const QuranicGames = require('../games/quranicGames');
       const menu = QuranicGames.formatGamesList();
-      
+
       await ctx.reply(menu, { parse_mode: 'HTML' });
-      
+
       logger.logCommand('qgames', ctx.from.id, true);
     } catch (error) {
       logger.error('QGames command error:', error);

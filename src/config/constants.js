@@ -78,7 +78,7 @@ const LEVELING = {
 
   // Rewards
   COINS_PER_LEVEL: 50,
-  
+
   // Cooldown between XP gains (to prevent spam)
   XP_COOLDOWN: 60000 // 1 minute
 };

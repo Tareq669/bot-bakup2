@@ -22,7 +22,7 @@ class EconomyHandlers {
 
     // Shop system command
     bot.command('shop', EconomyHandlers.handleShopCommand);
-    
+
     // Transfer command
     bot.command('transfer', EconomyHandlers.handleTransferCommand);
 
@@ -101,12 +101,12 @@ class EconomyHandlers {
   static async handleShopCommand(ctx) {
     try {
       logger.logCommand('shop', ctx.from.id);
-      
+
       const ShopSystem = require('../features/shopSystem');
       const menu = ShopSystem.formatShopMenu();
-      
+
       await ctx.reply(menu, { parse_mode: 'HTML' });
-      
+
       logger.logCommand('shop', ctx.from.id, true);
     } catch (error) {
       logger.error('Shop command error:', error);
@@ -120,8 +120,8 @@ class EconomyHandlers {
   static async handleTransferCommand(ctx) {
     try {
       logger.logCommand('transfer', ctx.from.id);
-      
-      const PaymentSystem = require('../features/paymentSystem');
+
+      // Payment system integration would go here
       const msg = ctx.message.text.split(' ');
 
       if (msg.length < 3) {
@@ -134,10 +134,10 @@ class EconomyHandlers {
       }
 
       await ctx.reply('🔄 جاري معالجة التحويل...');
-      
-      logger.logInteraction(ctx.from.id, 'transfer_initiated', { 
-        to: msg[1], 
-        amount: msg[2] 
+
+      logger.logInteraction(ctx.from.id, 'transfer_initiated', {
+        to: msg[1],
+        amount: msg[2]
       });
     } catch (error) {
       logger.error('Transfer command error:', error);
