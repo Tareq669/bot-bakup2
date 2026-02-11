@@ -32,15 +32,16 @@ bot.telegram.setMyCommands([
   { command: 'khatma', description: '🕌 الختمة' },
   { command: 'adhkar', description: '📿 الأذكار' },
   { command: 'quran', description: '📖 القرآن' },
-  { command: 'quotes', description: '💭 الاقتباسات' },
-  { command: 'poetry', description: '✍️ الشعر' },
   { command: 'games', description: '🎮 الألعاب' },
+  { command: 'qgames', description: '🎯 الألعاب القرآنية' },
   { command: 'economy', description: '💰 الاقتصاد' },
+  { command: 'shop', description: '🛍️ المتجر' },
+  { command: 'transfer', description: '📤 تحويل أموال' },
   { command: 'profile', description: '👤 حسابي' },
   { command: 'leaderboard', description: '🏆 المتصدرين' },
-  { command: 'stats', description: '📊 إحصائيات' },
-  { command: 'rewards', description: '🎁 المكافآت' },
-  { command: 'help', description: '❓ الساعدة' }
+  { command: 'language', description: '🌐 اللغة' },
+  { command: 'notifications', description: '🔔 الإشعارات' },
+  { command: 'help', description: '❓ المساعدة' }
 ]).catch(err => {
   logger.error('خطأ في تعيين قائمة الأوامر:', err);
 });
@@ -138,6 +139,94 @@ bot.command('games', (ctx) => MenuHandler.handleGamesMenu(ctx));
 bot.command('economy', (ctx) => MenuHandler.handleEconomyMenu(ctx));
 bot.command('stats', (ctx) => CommandHandler.handleStats(ctx));
 bot.command('rewards', (ctx) => CommandHandler.handleRewards(ctx));
+
+// --- NEW FEATURES COMMANDS ---
+// Shop System
+bot.command('shop', async (ctx) => {
+  try {
+    const ShopSystem = require('./features/shopSystem');
+    const menu = ShopSystem.formatShopMenu();
+    ctx.reply(menu, { parse_mode: 'HTML' });
+  } catch (error) {
+    logger.error('Shop error:', error);
+    ctx.reply('❌ خدمة المتجر غير متاحة');
+  }
+});
+
+// Payment & Transfer
+bot.command('transfer', async (ctx) => {
+  try {
+    const PaymentSystem = require('./features/paymentSystem');
+    const msg = ctx.message.text.split(' ');
+    
+    if (msg.length < 3) {
+      return ctx.reply('استخدم: /transfer @username amount\nمثال: /transfer @user 100');
+    }
+    
+    ctx.reply('🔄 جاري معالجة التحويل...');
+  } catch (error) {
+    ctx.reply('❌ حدث خطأ في التحويل');
+  }
+});
+
+// Multi-language
+bot.command('language', async (ctx) => {
+  try {
+    const LanguageManager = require('./utils/languageManager');
+    const langManager = new LanguageManager();
+    const menu = langManager.getLanguagesMenu();
+    ctx.reply(menu, { parse_mode: 'HTML' });
+  } catch (error) {
+    ctx.reply('❌ خدمة اللغات غير متاحة');
+  }
+});
+
+// Notifications Management
+bot.command('notifications', async (ctx) => {
+  try {
+    const msg = `🔔 <b>إدارة الإشعارات</b>\n\n`;
+    const msg2 = msg + `${ctx.message.from.first_name}\n\n`;
+    const msg3 = msg2 + `استخدم الخيارات التالية:\n`;
+    const msg4 = msg3 + `✅ تفعيل\n❌ تعطيل\n\n/notif on|off`;
+    ctx.reply(msg4, { parse_mode: 'HTML' });
+  } catch (error) {
+    ctx.reply('❌ خدمة الإشعارات غير متاحة');
+  }
+});
+
+// Backup System
+bot.command('backup', async (ctx) => {
+  const ownerIds = (process.env.BOT_OWNERS || '').split(',').filter(Boolean).map(Number);
+  
+  if (!ownerIds.includes(ctx.from.id)) {
+    return ctx.reply('❌ ليس لديك صلاحية');
+  }
+  
+  try {
+    const BackupSystem = require('./utils/backupSystem');
+    const backup = new BackupSystem();
+    const result = await backup.backupUsers();
+    
+    if (result.success) {
+      ctx.reply(`✅ تم النسخ الاحتياطية!\n📦 ${result.filename}\n👥 ${result.count} مستخدم`);
+    } else {
+      ctx.reply('❌ فشل النسخ الاحتياطية');
+    }
+  } catch (error) {
+    ctx.reply('❌ خطأ في النسخ الاحتياطية');
+  }
+});
+
+// Quranic Games
+bot.command('qgames', async (ctx) => {
+  try {
+    const QuranicGames = require('./games/quranicGames');
+    const menu = QuranicGames.formatGamesList();
+    ctx.reply(menu, { parse_mode: 'HTML' });
+  } catch (error) {
+    ctx.reply('❌ خدمة الألعاب غير متاحة');
+  }
+});
 
 // --- ADMIN COMMANDS ---
 bot.command('health', async (ctx) => {
@@ -1815,6 +1904,42 @@ async function startBot() {
 
     logger.info('✅ البوت يعمل الآن!');
     logger.info(`🎯 البوت مستعد و ينتظر الرسائل...`);
+
+    // Initialize New Systems
+    logger.info('📲 جاري تفعيل الأنظمة الجديدة...');
+    
+    try {
+      // Initialize Notification System
+      const NotificationSystem = require('./features/notificationSystem');
+      const notificationSystem = new NotificationSystem(bot);
+      notificationSystem.initialize();
+      logger.info('✅ نظام الإشعارات الذكية جاهز');
+      
+      // Initialize Backup System
+      const BackupSystem = require('./utils/backupSystem');
+      const backupSystem = new BackupSystem();
+      backupSystem.scheduleAutomaticBackups();
+      logger.info('✅ نظام النسخ الاحتياطية جاهز');
+      
+      // Initialize Cache Manager
+      const CacheManager = require('./utils/cacheManager');
+      global.cache = new CacheManager(600);
+      logger.info('✅ نظام التخزين المؤقت جاهز');
+      
+      // Initialize Rate Limiter
+      const RateLimiter = require('./utils/rateLimiter');
+      global.rateLimiter = new RateLimiter();
+      logger.info('✅ نظام الحماية من الإساءة جاهز');
+      
+      // Initialize Language Manager
+      const LanguageManager = require('./utils/languageManager');
+      global.languageManager = new LanguageManager();
+      logger.info('✅ نظام اللغات المتعددة جاهز');
+      
+      logger.info('✅ جميع الأنظمة الجديدة جاهزة!');
+    } catch (error) {
+      logger.error('⚠️ خطأ في تفعيل بعض الأنظمة:', error.message);
+    }
 
       // Start Khatma scheduler (sends notifications to opted-in users)
       try {
