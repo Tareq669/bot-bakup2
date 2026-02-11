@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // src/index.js
 
 const { Telegraf } = require('telegraf');
@@ -57,3 +58,8 @@ bot.catch((err) => {
         process.exit(1);
     }
 })();
+=======
+// Assuming you've restored the content of src/index.js
+console.log('Bot has been restored!');
+// Add the rest of your restored code here...
+>>>>>>> 7c89d3cbe61d82f4f596f309c05231e17a57f287
