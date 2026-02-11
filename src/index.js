@@ -1,6 +1,7 @@
 ﻿require('dotenv').config();
 const { Telegraf, Context, session } = require('telegraf');
 const express = require('express');
+const https = require('https');
 const Database = require('./database/db');
 const CommandHandler = require('./commands/commandHandler');
 const MenuHandler = require('./commands/menuHandler');
@@ -20,8 +21,25 @@ const SmartNotifications = require('./ai/smartNotifications');
 const AnalyticsEngine = require('./ai/analyticsEngine');
 const IntegratedAI = require('./ai/integratedAI');
 
-// Initialize bot
-const bot = new Telegraf(process.env.BOT_TOKEN);
+// Configure HTTPS Agent for Telegram API
+const httpsAgent = new https.Agent({
+  timeout: 60000,
+  keepAlive: true,
+  keepAliveMsecs: 30000
+});
+
+// Initialize bot with proper config
+const bot = new Telegraf(process.env.BOT_TOKEN, {
+  telegram: {
+    agent: httpsAgent,
+    apiRoot: 'https://api.telegram.org'
+  },
+  polling: {
+    timeout: 30,
+    limit: 100,
+    allowedUpdates: ['message', 'callback_query', 'inline_query']
+  }
+});
 
 // Initialize session middleware
 bot.use(session());
@@ -48,12 +66,18 @@ bot.telegram.setMyCommands([
 
 // Error handling for bot
 bot.catch((err, ctx) => {
+  // تجاهل أخطاء Timeout المتوقعة
+  if (err.code === 'ETIMEDOUT' || err.code === 'ENETUNREACH') {
+    logger.warn(`⚠️ خطأ اتصال مؤقت: ${err.code}`);
+    return;
+  }
+
   logger.error('❌ خطأ في البوت:', err);
   healthMonitor.logError();
   
   // حاول الرد على المستخدم
   try {
-    if (ctx && ctx.reply) {
+    if (ctx && ctx.reply && err.code !== 409) {
       ctx.reply('❌ حدث خطأ غير متوقع، جاري محاولة الإصلاح...').catch(e => {
         logger.error('فشل الرد على الخطأ:', e.message);
       });
