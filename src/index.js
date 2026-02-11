@@ -1,5 +1,5 @@
 ﻿require('dotenv').config();
-const { Telegraf, Context, session } = require('telegraf');
+const { Telegraf, Context, session, Markup } = require('telegraf');
 const express = require('express');
 const https = require('https');
 const Database = require('./database/db');
@@ -967,7 +967,7 @@ bot.action('eco:auction', async (ctx) => {
     
     const message = `🎪 <b>سوق المزاد</b>\n\n${items.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}\n\n💰 اختر عنصراً للمزايدة عليه`;
     
-    await ctx.editMessageText(message, { parse_mode: 'HTML', reply_markup: Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'menu:economy')]]).reply_markup });
+    await ctx.editMessageText(message, { parse_mode: 'HTML', reply_markup: Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'menu:economy')]]) });
     ctx.answerCbQuery('✅');
   } catch (error) {
     console.error('Auction error:', error);
