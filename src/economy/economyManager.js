@@ -212,7 +212,7 @@ class EconomyManager {
   static async buyItem(userId, itemId) {
     try {
       const items = this.getShopItems();
-      const item = items.find(i => i.id === itemId);
+      const item = items.find(i => i.id === parseInt(itemId));
 
       if (!item) return { success: false, message: '❌ العنصر غير موجود' };
 
@@ -227,13 +227,13 @@ class EconomyManager {
       }
 
       user.coins -= item.price;
-      const existingItem = user.inventory.find(i => i.itemId === item.id);
+      const existingItem = user.inventory.find(i => i.itemId === String(item.id));
 
       if (existingItem) {
         existingItem.quantity += 1;
       } else {
         user.inventory.push({
-          itemId: item.id,
+          itemId: String(item.id),
           itemName: item.name,
           quantity: 1,
           boughtAt: new Date()
