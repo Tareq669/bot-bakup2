@@ -1792,77 +1792,12 @@ bot.on('text', async (ctx) => {
       }
     }
 
-    // Handle admin awaiting input
-    if (ctx.session && ctx.session.adminAwait) {
-      const awaiting = ctx.session.adminAwait;
+    // Handle economy awaiting input
+    if (ctx.session && ctx.session.ecoAwait) {
+      const awaiting = ctx.session.ecoAwait;
       const { User } = require('./database/models');
 
       try {
-        if (awaiting.type === 'searchUser') {
-          // Search for user by ID or name
-          let foundUser;
-          if (/^\d+$/.test(message.trim())) {
-            // Search by ID
-            foundUser = await User.findOne({ userId: parseInt(message.trim()) });
-          } else {
-            // Search by name
-            foundUser = await User.findOne({ firstName: new RegExp(message.trim(), 'i') });
-          }
-
-          ctx.session.adminAwait = null;
-
-          if (!foundUser) {
-            return ctx.reply('❌ لم يتم العثور على المستخدم');
-          }
-
-          const userInfo =
-            '👤 <b>معلومات المستخدم</b>\n\n' +
-            `👤 الاسم: ${foundUser.firstName}\n` +
-            `🆔 ID: ${foundUser.userId}\n` +
-            `⭐ النقاط: ${foundUser.xp || 0}\n` +
-            `🎖️ المستوى: ${foundUser.level || 1}\n` +
-            `💰 العملات: ${foundUser.coins || 0}\n` +
-            `📅 تاريخ الانضمام: ${new Date(foundUser.joinDate).toLocaleDateString('ar')}`;
-
-          const buttons = Markup.inlineKeyboard(
-            [Markup.button.callback('🚫 حظر', `admin:ban:${  foundUser.userId}`)],
-            [Markup.button.callback('✅ السماح', `admin:unban:${  foundUser.userId}`)],
-            [Markup.button.callback('⬅️ رجوع', 'settings:users')]
-          );
-
-          return ctx.reply(userInfo, { parse_mode: 'HTML', reply_markup: buttons.reply_markup });
-        }
-
-        if (awaiting.type === 'broadcast') {
-          // Handle broadcast message
-          if (message.toLowerCase() === '/cancel') {
-            ctx.session.adminAwait = null;
-            return ctx.reply('❌ تم الإلغاء');
-          }
-
-          const allUsers = await User.find({ banned: false });
-          let sent = 0;
-          let failed = 0;
-
-          await ctx.reply(`📊 جاري الإرسال لـ ${allUsers.length} مستخدم...`);
-
-          const sendPromises = allUsers.map((user) => {
-            return ctx.telegram
-              .sendMessage(user.userId, `📢 <b>رسالة من الإدارة</b>\n\n${message}`, {
-                parse_mode: 'HTML'
-              })
-              .then(() => sent++)
-              .catch(() => failed++);
-          });
-
-          await Promise.all(sendPromises);
-          ctx.session.adminAwait = null;
-
-          return ctx.reply(`✅ <b>تم الإرسال</b>\n\n✅ نجح: ${sent}\n❌ فشل: ${failed}`, {
-            parse_mode: 'HTML'
-          });
-        }
-
         if (awaiting.type === 'transfer') {
           // Handle coin transfer - find target user
           const targetId = message.trim();
@@ -1983,6 +1918,83 @@ bot.on('text', async (ctx) => {
       } catch (err) {
         console.error('Error handling ecoAwait input:', err);
         ctx.session.ecoAwait = null;
+        return ctx.reply('❌ حدث خطأ أثناء المعالجة');
+      }
+    }
+
+    // Handle admin awaiting input
+    if (ctx.session && ctx.session.adminAwait) {
+      const awaiting = ctx.session.adminAwait;
+      const { User } = require('./database/models');
+
+      try {
+        if (awaiting.type === 'searchUser') {
+          // Search for user by ID or name
+          let foundUser;
+          if (/^\d+$/.test(message.trim())) {
+            // Search by ID
+            foundUser = await User.findOne({ userId: parseInt(message.trim()) });
+          } else {
+            // Search by name
+            foundUser = await User.findOne({ firstName: new RegExp(message.trim(), 'i') });
+          }
+
+          ctx.session.adminAwait = null;
+
+          if (!foundUser) {
+            return ctx.reply('❌ لم يتم العثور على المستخدم');
+          }
+
+          const userInfo =
+            '👤 <b>معلومات المستخدم</b>\n\n' +
+            `👤 الاسم: ${foundUser.firstName}\n` +
+            `🆔 ID: ${foundUser.userId}\n` +
+            `⭐ النقاط: ${foundUser.xp || 0}\n` +
+            `🎖️ المستوى: ${foundUser.level || 1}\n` +
+            `💰 العملات: ${foundUser.coins || 0}\n` +
+            `📅 تاريخ الانضمام: ${new Date(foundUser.joinDate).toLocaleDateString('ar')}`;
+
+          const buttons = Markup.inlineKeyboard(
+            [Markup.button.callback('🚫 حظر', `admin:ban:${  foundUser.userId}`)],
+            [Markup.button.callback('✅ السماح', `admin:unban:${  foundUser.userId}`)],
+            [Markup.button.callback('⬅️ رجوع', 'settings:users')]
+          );
+
+          return ctx.reply(userInfo, { parse_mode: 'HTML', reply_markup: buttons.reply_markup });
+        }
+
+        if (awaiting.type === 'broadcast') {
+          // Handle broadcast message
+          if (message.toLowerCase() === '/cancel') {
+            ctx.session.adminAwait = null;
+            return ctx.reply('❌ تم الإلغاء');
+          }
+
+          const allUsers = await User.find({ banned: false });
+          let sent = 0;
+          let failed = 0;
+
+          await ctx.reply(`📊 جاري الإرسال لـ ${allUsers.length} مستخدم...`);
+
+          const sendPromises = allUsers.map((user) => {
+            return ctx.telegram
+              .sendMessage(user.userId, `📢 <b>رسالة من الإدارة</b>\n\n${message}`, {
+                parse_mode: 'HTML'
+              })
+              .then(() => sent++)
+              .catch(() => failed++);
+          });
+
+          await Promise.all(sendPromises);
+          ctx.session.adminAwait = null;
+
+          return ctx.reply(`✅ <b>تم الإرسال</b>\n\n✅ نجح: ${sent}\n❌ فشل: ${failed}`, {
+            parse_mode: 'HTML'
+          });
+        }
+      } catch (err) {
+        console.error('Error handling adminAwait input:', err);
+        ctx.session.adminAwait = null;
         return ctx.reply('❌ حدث خطأ أثناء المعالجة');
       }
     }
