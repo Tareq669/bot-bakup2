@@ -1,4 +1,4 @@
-/* eslint-disable quotes, no-unexpected-multiline, prefer-template, no-const-assign */
+/* eslint-disable quotes, no-unexpected-multiline, prefer-template, no-const-assign, no-trailing-spaces, no-undef, no-unused-vars, prefer-const */
 require('dotenv').config();
 const { Telegraf, session, Markup } = require('telegraf');
 const express = require('express');
@@ -14,6 +14,9 @@ const { logger } = require('./utils/helpers');
 const ReconnectManager = require('./utils/reconnect');
 const connectionMonitor = require('./utils/connectionMonitor');
 const healthMonitor = require('./utils/healthMonitor');
+const EconomyManager = require('./economy/economyManager');
+const Formatter = require('./ui/formatter');
+const { User } = require('./database/models');
 
 // Import AI Systems
 const AIManager = require('./ai/aiManager');
@@ -75,7 +78,6 @@ bot.catch((err, ctx) => {
 
   logger.error('? ??? ?? ?????:', err);
   healthMonitor.logError();
-  
   // ???? ???? ??? ????????
   try {
     if (ctx && ctx.reply && err.code !== 409) {
@@ -1816,7 +1818,7 @@ bot.on('text', async (ctx) => {
               `?? <b>????? ?? ???????</b>\n\n${message}`, 
               { parse_mode: 'HTML' }
             ).then(() => sent++)
-            .catch(() => failed++);
+              .catch(() => failed++);
           });
 
           await Promise.all(sendPromises);
@@ -2230,14 +2232,14 @@ const reconnectManager = new ReconnectManager({
   maxRetries: 50,
   initialDelay: 3000,
   maxDelay: 300000,
-  backoffMultiplier: 1.5,
+  backoffMultiplier: 1.5
 });
 
-let botStart = async () => {
+const botStart = async () => {
   return new Promise((resolve, reject) => {
     try {
       logger.info('?? ???? ??? ??? Telegram...');
-      
+
       // Delete any existing webhook to prevent conflicts
       bot.telegram.deleteWebhook({ drop_pending_updates: true })
         .then(() => {
@@ -2246,7 +2248,7 @@ let botStart = async () => {
         .catch((webhookError) => {
           logger.warn('?? ??? ?? ??? ??? Webhook:', webhookError.message);
         });
-      
+
       // Launch bot
       bot.launch()
         .then(() => {
@@ -2259,7 +2261,7 @@ let botStart = async () => {
         .catch((error) => {
           logger.error('? ??? ?? ??? ?????:', error.message);
           reconnectManager.isConnected = false;
-          
+
           // Handle 409 Conflict error (another bot instance running)
           if (error.response && error.response.error_code === 409) {
             logger.warn('?? ??? 409: ???? ???? ???? ?? ????? ???? ??????...');
@@ -2282,11 +2284,11 @@ async function startBot() {
   try {
     // Give any previous instance time to fully shutdown (Railway cold start delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Connect to database
     logger.info('?? ???? ??????? ?? MongoDB...');
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/arab-bot';
-    
+
     // ?????? ??????? ?? MongoDB ?? ????? ??????
     await reconnectManager.connect(async () => {
       await Database.connect(mongoUri);
@@ -2295,12 +2297,12 @@ async function startBot() {
 
     // Start bot with intelligent retry logic
     logger.info('?? ???? ??? ?????...');
-    
+
     let botStarted = false;
     let retryCount = 0;
     const maxRetries = 5;
     const retryDelays = [3000, 5000, 7000, 10000, 15000]; // Increasing delays
-    
+
     while (retryCount < maxRetries && !botStarted) {
       try {
         // Wait before trying to start (gives previous instance time to shutdown)
@@ -2309,17 +2311,17 @@ async function startBot() {
           logger.info(`? ?????? #${retryCount + 1}/${maxRetries} ??? ${delayMs / 1000} ?????...`);
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
-        
+
         await botStart();
         botStarted = true;
         logger.info('? ????? ????!');
       } catch (error) {
         retryCount++;
-        
+
         // Check if it's a 409 error (another instance running)
         if (error.response && error.response.error_code === 409) {
           logger.warn(`?? ?????? #${retryCount}/${maxRetries} - ??? 409 (???? ???? ????)`);
-          
+
           if (retryCount >= maxRetries) {
             logger.error('? ?? ????? ??? ?????????. ???? ??????? ?????? ??????? ?????? ???????.');
             process.exit(1);
@@ -2375,61 +2377,71 @@ async function startBot() {
 
     // Initialize New Systems
     logger.info('?? ???? ????? ??????? ???????...');
-    
+
     try {
       // Initialize Notification System
       const NotificationSystem = require('./features/notificationSystem');
       const notificationSystem = new NotificationSystem(bot);
       notificationSystem.initialize();
       logger.info('? ???? ????????? ?????? ????');
-      
+
       // Initialize Backup System
       const BackupSystem = require('./utils/backupSystem');
       const backupSystem = new BackupSystem();
       backupSystem.scheduleAutomaticBackups();
       logger.info('? ???? ????? ?????????? ????');
-      
+
       // Initialize Cache Manager
       const CacheManager = require('./utils/cacheManager');
       global.cache = new CacheManager(600);
       logger.info('? ???? ??????? ?????? ????');
-      
+
       // Initialize Rate Limiter
       const RateLimiter = require('./utils/rateLimiter');
       global.rateLimiter = new RateLimiter();
       logger.info('? ???? ??????? ?? ??????? ????');
-      
+
       // Initialize Language Manager
       const LanguageManager = require('./utils/languageManager');
       global.languageManager = new LanguageManager();
       logger.info('? ???? ?????? ???????? ????');
-      
+
       logger.info('? ???? ??????? ??????? ?????!');
     } catch (error) {
       logger.error('?? ??? ?? ????? ??? ???????:', error.message);
     }
 
-      // Start Khatma scheduler (sends notifications to opted-in users)
-      let khatmaScheduler = null;
-      try {
-        const KhatmaScheduler = require('./utils/khatmaScheduler');
-        khatmaScheduler = new KhatmaScheduler({ intervalMs: 1000 * 60 * 15 }, bot);
-        khatmaScheduler.start();
-        logger.info('?? KhatmaScheduler started � notifying opted-in users');
-      } catch (err) {
-        logger.error('? Failed to start KhatmaScheduler:', err.message);
-      }
+
+    // Start Khatma scheduler (sends notifications to opted-in users)
+
+    let khatmaScheduler = null;
+
+    try {
+
+      const KhatmaScheduler = require('./utils/khatmaScheduler');
+
+      khatmaScheduler = new KhatmaScheduler({ intervalMs: 1000 * 60 * 15 }, bot);
+
+      khatmaScheduler.start();
+
+      logger.info('?? KhatmaScheduler started � notifying opted-in users');
+
+    } catch (err) {
+
+      logger.error('? Failed to start KhatmaScheduler:', err.message);
+
+    }
 
     // Graceful shutdown with timeout
     const gracefulShutdown = (signal) => {
       logger.info(`?? ???? ????? ?????... (${signal})`);
-      
+
       // Set a timeout to force exit if shutdown takes too long
       const shutdownTimeout = setTimeout(() => {
         logger.error('?? ????? ???? ???????? ????? ????...');
         process.exit(1);
       }, 10000); // 10 second timeout
-      
+
       // Stop all services
       try {
         if (khatmaScheduler) {
@@ -2451,7 +2463,7 @@ async function startBot() {
       } catch (error) {
         logger.error('??? ????? ????? ???????:', error.message);
       }
-      
+
       // Stop bot
       try {
         bot.stop(signal);
@@ -2467,14 +2479,14 @@ async function startBot() {
 
     // Setup graceful shutdown handlers
     let isShuttingDown = false;
-    
+
     process.once('SIGINT', () => {
       if (!isShuttingDown) {
         isShuttingDown = true;
         gracefulShutdown('SIGINT');
       }
     });
-    
+
     process.once('SIGTERM', () => {
       if (!isShuttingDown) {
         isShuttingDown = true;
@@ -2493,7 +2505,6 @@ async function startBot() {
       logger.error('? ??????? ??? ?????:', error.message);
       logger.error('?? Stack:', error.stack);
       healthMonitor.logError();
-      
       // ?? ???? ???????? ?? ??????? ?????? ?? ????? ???????
       if (process.env.NODE_ENV === 'production') {
         logger.error('?? ????? ??????. ??????? ????? ?????? ????????...');
@@ -2507,7 +2518,6 @@ async function startBot() {
   } catch (error) {
     logger.error('? ??? ?? ??? ?????:', error.message);
     logger.info('? ?????? ????? ??????? ?????? ???? 10 ?????...');
-    
     setTimeout(() => {
       startBot();
     }, 10000);
