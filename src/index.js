@@ -1,3 +1,4 @@
+/* eslint-disable quotes, no-unexpected-multiline, prefer-template, no-const-assign */
 require('dotenv').config();
 const { Telegraf, session, Markup } = require('telegraf');
 const express = require('express');
