@@ -2170,52 +2170,49 @@ const reconnectManager = new ReconnectManager({
 });
 
 let botStart = async () => {
-  try {
-    logger.info('🤖 جاري بدء بوت Telegram...');
-    
-    // Delete any existing webhook to prevent conflicts
+  return new Promise((resolve, reject) => {
     try {
-      await bot.telegram.deleteWebhook({ drop_pending_updates: true });
-      logger.info('✅ تم التحقق من حذف الـ Webhook');
-    } catch (webhookError) {
-      logger.warn('⚠️ خطأ في حذف الـ Webhook:', webhookError.message);
-    }
-    
-    // Launch bot (non-blocking, returns immediately)
-    bot.launch()
-      .then(() => {
-        reconnectManager.isConnected = true;
-        logger.info('✅ تم تشغيل البوت بنجاح!');
-        logger.info('✅ البوت يعمل الآن!');
-        logger.info('🎯 البوت مستعد و ينتظر الرسائل...');
-      })
-      .catch((error) => {
-        logger.error('❌ فشل في بدء البوت:', error.message);
-        logger.error('📋 تفاصيل الخطأ:', error);
-        reconnectManager.isConnected = false;
-        
-        // Handle 409 Conflict error
-        if (error.response && error.response.error_code === 409) {
-          logger.error('💥 خطأ 409: يوجد نسخة أخرى من البوت تعمل!');
-          logger.error('📍 تأكد من إيقاف جميع النسخ الأخرى على Railway أو أي خدمة أخرى');
-          process.exit(1); // Exit to let the cloud service handle restart
-        } else {
-          // For other errors, exit and let railway restart
-          logger.error('🔄 سيحاول النظام إعادة التشغيل تلقائياً...');
-          setTimeout(() => {
+      logger.info('🤖 جاري بدء بوت Telegram...');
+      
+      // Delete any existing webhook to prevent conflicts
+      bot.telegram.deleteWebhook({ drop_pending_updates: true })
+        .then(() => {
+          logger.info('✅ تم التحقق من حذف الـ Webhook');
+        })
+        .catch((webhookError) => {
+          logger.warn('⚠️ خطأ في حذف الـ Webhook:', webhookError.message);
+        });
+      
+      // Launch bot
+      bot.launch()
+        .then(() => {
+          reconnectManager.isConnected = true;
+          logger.info('✅ تم تشغيل البوت بنجاح!');
+          logger.info('✅ البوت يعمل الآن!');
+          logger.info('🎯 البوت مستعد و ينتظر الرسائل...');
+          resolve(true);
+        })
+        .catch((error) => {
+          logger.error('❌ فشل في بدء البوت:', error.message);
+          logger.error('📋 تفاصيل الخطأ:', error);
+          reconnectManager.isConnected = false;
+          
+          // Handle 409 Conflict error
+          if (error.response && error.response.error_code === 409) {
+            logger.error('💥 خطأ 409: يوجد نسخة أخرى من البوت تعمل!');
+            logger.error('📍 تأكد من إيقاف جميع النسخ الأخرى على Railway أو أي خدمة أخرى');
             process.exit(1);
-          }, 2000);
-        }
-      });
-    
-    // Give it a moment to start
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    return true;
-  } catch (error) {
-    logger.error('❌ فشل في بدء البوت:', error.message);
-    reconnectManager.isConnected = false;
-    return false;
-  }
+          } else {
+            logger.error('🔄 سيحاول النظام إعادة التشغيل تلقائياً...');
+            reject(error);
+          }
+        });
+    } catch (error) {
+      logger.error('❌ خطأ في محاولة بدء البوت:', error.message);
+      reconnectManager.isConnected = false;
+      reject(error);
+    }
+  });
 };
 
 async function startBot() {
@@ -2233,16 +2230,12 @@ async function startBot() {
     // Start bot with reconnection management
     logger.info('🚀 جاري بدء البوت...');
     
-    let success = await botStart();
-    
-    if (!success) {
-      // بدء نظام إعادة الاتصال التلقائي
-      await reconnectManager.startAutoReconnect(
-        botStart,
-        () => {
-          logger.info('🔄 تم استعادة الاتصال بالبوت!');
-        }
-      );
+    try {
+      await botStart();
+      logger.info('✅ البوت جاهز!');
+    } catch (error) {
+      logger.error('❌ فشل في بدء البوت في المحاولة الأولى:', error.message);
+      // Continue - the system will handle reconnection
     }
 
     // بدء مراقبة صحة الاتصال
@@ -2376,29 +2369,42 @@ async function startBot() {
       }
     };
 
-    process.once('SIGINT', () => gracefulShutdown('SIGINT'));
-    process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    // Setup graceful shutdown handlers
+    let isShuttingDown = false;
+    
+    process.once('SIGINT', () => {
+      if (!isShuttingDown) {
+        isShuttingDown = true;
+        gracefulShutdown('SIGINT');
+      }
+    });
+    
+    process.once('SIGTERM', () => {
+      if (!isShuttingDown) {
+        isShuttingDown = true;
+        gracefulShutdown('SIGTERM');
+      }
+    });
 
     // معالجة أخطاء غير متوقعة
     process.on('unhandledRejection', (reason, promise) => {
       logger.error('❌ Promise Rejection غير معالج:', reason);
+      logger.error('💡 Stack:', reason instanceof Error ? reason.stack : reason);
       healthMonitor.logError();
     });
 
-    // Track restart attempts to prevent infinite loops
-    let restartAttempts = 0;
-    const MAX_RESTART_ATTEMPTS = 3;
-
     process.on('uncaughtException', (error) => {
-      logger.error('❌ استثناء غير معالج:', error);
+      logger.error('❌ استثناء غير معالج:', error.message);
+      logger.error('💡 Stack:', error.stack);
       healthMonitor.logError();
       
       // في بيئة الإنتاج، دع السحابة تتعامل مع إعادة التشغيل
       if (process.env.NODE_ENV === 'production') {
         logger.error('💥 البوت سيتوقف. السحابة ستعيد تشغيله تلقائياً...');
-        setTimeout(() => {
-          process.exit(1);
-        }, 1000);
+        if (!isShuttingDown) {
+          isShuttingDown = true;
+          gracefulShutdown('UNCAUGHT_EXCEPTION');
+        }
       }
     });
 
