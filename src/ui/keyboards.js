@@ -1,6 +1,10 @@
 const Markup = require('telegraf/markup');
 
 class UIManager {
+  static getLabel(labels, key, fallback) {
+    return (labels && labels[key]) || fallback;
+  }
+
   // Check if user is owner
   static isOwner(userId) {
     const ownerIds = (process.env.BOT_OWNERS || '').split(',').filter(Boolean).map(id => parseInt(id.trim()));
@@ -8,93 +12,95 @@ class UIManager {
   }
 
   // Owner Reply Keyboard - للمالك فقط
-  static ownerReplyKeyboard() {
+  static ownerReplyKeyboard(labels = null) {
+    const label = (key, fallback) => this.getLabel(labels, key, fallback);
     return Markup.keyboard([
       [
-        Markup.button.text('🕌 الختمة'),
-        Markup.button.text('📿 الأذكار')
+        Markup.button.text(label('khatma', '🕌 الختمة')),
+        Markup.button.text(label('adhkar', '📿 الأذكار'))
       ],
       [
-        Markup.button.text('📖 القرآن'),
-        Markup.button.text('💭 الاقتباسات')
+        Markup.button.text(label('quran', '📖 القرآن')),
+        Markup.button.text(label('quotes', '💭 الاقتباسات'))
       ],
       [
-        Markup.button.text('🎮 الألعاب'),
-        Markup.button.text('💰 الاقتصاد')
+        Markup.button.text(label('games', '🎮 الألعاب')),
+        Markup.button.text(label('economy', '💰 الاقتصاد'))
       ],
       [
-        Markup.button.text('👤 حسابي'),
-        Markup.button.text('🏆 المتصدرين')
+        Markup.button.text(label('profile', '👤 حسابي')),
+        Markup.button.text(label('leaderboard', '🏆 المتصدرين'))
       ],
       [
-        Markup.button.text('✨ الميزات'),
-        Markup.button.text('📚 المكتبة')
+        Markup.button.text(label('features', '✨ الميزات')),
+        Markup.button.text(label('library', '📚 المكتبة'))
       ],
       [
-        Markup.button.text('👑 لوحة المالك'),
-        Markup.button.text('⚙️ الإعدادات')
+        Markup.button.text(label('owner_panel', '👑 لوحة المالك')),
+        Markup.button.text(label('settings', '⚙️ الإعدادات'))
       ],
       [
-        Markup.button.text('📊 إحصائيات'),
-        Markup.button.text('🎁 المكافآت')
+        Markup.button.text(label('stats', '📊 إحصائيات')),
+        Markup.button.text(label('rewards', '🎁 المكافآت'))
       ],
       [
-        Markup.button.text('❌ إغلق')
+        Markup.button.text(label('close', '❌ إغلق'))
       ]
     ]).resize();
   }
 
   // Main Menu Keyboard - Reply Keyboard
-  static mainReplyKeyboard(userId = null) {
+  static mainReplyKeyboard(userId = null, labels = null) {
     // إذا كان المستخدم مالك، أعطه لوحة مفاتيح خاصة
     if (userId && this.isOwner(userId)) {
-      return this.ownerReplyKeyboard();
+      return this.ownerReplyKeyboard(labels);
     }
 
+    const label = (key, fallback) => this.getLabel(labels, key, fallback);
     return Markup.keyboard([
       [
-        Markup.button.text('🕌 الختمة'),
-        Markup.button.text('📿 الأذكار')
+        Markup.button.text(label('khatma', '🕌 الختمة')),
+        Markup.button.text(label('adhkar', '📿 الأذكار'))
       ],
       [
-        Markup.button.text('📖 القرآن'),
-        Markup.button.text('💭 الاقتباسات')
+        Markup.button.text(label('quran', '📖 القرآن')),
+        Markup.button.text(label('quotes', '💭 الاقتباسات'))
       ],
       [
-        Markup.button.text('✍️ الشعر'),
-        Markup.button.text('🎮 الألعاب')
+        Markup.button.text(label('poetry', '✍️ الشعر')),
+        Markup.button.text(label('games', '🎮 الألعاب'))
       ],
       [
-        Markup.button.text('💰 الاقتصاد'),
-        Markup.button.text('👤 حسابي')
+        Markup.button.text(label('economy', '💰 الاقتصاد')),
+        Markup.button.text(label('profile', '👤 حسابي'))
       ],
       [
-        Markup.button.text('🏆 المتصدرين'),
-        Markup.button.text('⚙️ الإعدادات')
+        Markup.button.text(label('leaderboard', '🏆 المتصدرين')),
+        Markup.button.text(label('settings', '⚙️ الإعدادات'))
       ],
       [
-        Markup.button.text('✨ الميزات'),
-        Markup.button.text('📚 المكتبة')
+        Markup.button.text(label('features', '✨ الميزات')),
+        Markup.button.text(label('library', '📚 المكتبة'))
       ],
       [
-        Markup.button.text('🛍️ المتجر'),
-        Markup.button.text('💸 التحويلات والتبرعات')
+        Markup.button.text(label('shop', '🛍️ المتجر')),
+        Markup.button.text(label('transfers', '💸 التحويلات والتبرعات'))
       ],
       [
-        Markup.button.text('🔔 الإشعارات الذكية'),
-        Markup.button.text('🌍 إدارة اللغات')
+        Markup.button.text(label('smart_notifications', '🔔 الإشعارات الذكية')),
+        Markup.button.text(label('language_admin', '🌍 إدارة اللغات'))
       ],
       [
-        Markup.button.text('📁 النسخ الاحتياطية'),
-        Markup.button.text('⚡ التخزين المؤقت')
+        Markup.button.text(label('backups', '📁 النسخ الاحتياطية')),
+        Markup.button.text(label('cache', '⚡ التخزين المؤقت'))
       ],
       [
-        Markup.button.text('🛡️ حماية من الإساءة'),
-        Markup.button.text('📊 إحصائيات')
+        Markup.button.text(label('protection', '🛡️ حماية من الإساءة')),
+        Markup.button.text(label('stats', '📊 إحصائيات'))
       ],
       [
-        Markup.button.text('🎁 المكافآت'),
-        Markup.button.text('❌ إغلق')
+        Markup.button.text(label('rewards', '🎁 المكافآت')),
+        Markup.button.text(label('close', '❌ إغلق'))
       ]
     ]).resize();
   }

@@ -796,10 +796,21 @@ ${rankMessage}
 
   static async handleLanguageSettings(ctx) {
     try {
-      const message = '🌐 <b>إعدادات اللغة</b>\n\n' +
-        'اللغة الحالية: العربية 🇸🇦\n\n' +
-        '📝 البوت يدعم حالياً اللغة العربية فقط.\n' +
-        'المزيد من اللغات قريباً!';
+      const LanguageManager = require('../utils/languageManager');
+      let languageManager = global.languageManager;
+      if (!languageManager) {
+        languageManager = new LanguageManager();
+        global.languageManager = languageManager;
+      }
+
+      const { language, translations } = await languageManager.getTranslationsForUser(ctx.from.id);
+      const languageInfo = languageManager.getLanguageInfo(language);
+
+      const message = `${translations.language_settings_title}\n\n` +
+        `${translations.current_language.replace('{language}', languageInfo?.name || language)}\n\n` +
+        `${translations.languages_available}\n` +
+        Object.values(languageManager.languages).map((lang) => `• ${lang.name}`).join('\n') +
+        `\n\n${translations.language_choose}\n\n${translations.languages_note}`;
 
       const buttons = Markup.inlineKeyboard([
         [Markup.button.callback('⬅️ رجوع', 'menu:settings')]
@@ -1485,16 +1496,15 @@ ${rankMessage}
   static async handleLanguagesMenu(ctx) {
     try {
       const UIManager = require('../ui/keyboards');
-      const message = `🌍 <b>إدارة اللغات</b>
+      const LanguageManager = require('../utils/languageManager');
+      let languageManager = global.languageManager;
+      if (!languageManager) {
+        languageManager = new LanguageManager();
+        global.languageManager = languageManager;
+      }
 
-اللغات المتاحة:
-• 🇸🇦 العربية (الافتراضية)
-• 🇬🇧 English
-• 🇫🇷 Français
-
-اختر اللغة المفضلة للبوت من القائمة أدناه.
-
-⚠️ هذه الميزة قيد التطوير`;
+      const { language } = await languageManager.getTranslationsForUser(ctx.from.id);
+      const message = languageManager.getLanguagesMenu(language);
 
       const keyboard = UIManager.languageMenuKeyboard();
 

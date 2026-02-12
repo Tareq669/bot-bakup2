@@ -9,22 +9,32 @@ class CommandHandler {
     const user = ctx.from;
 
     try {
+      const LanguageManager = require('../utils/languageManager');
+      let languageManager = global.languageManager;
+      if (!languageManager) {
+        languageManager = new LanguageManager();
+        global.languageManager = languageManager;
+      }
+
       let dbUser = await User.findOne({ userId: user.id });
       if (!dbUser) {
         dbUser = await EconomyManager.createUser(user.id, user);
       }
 
+      const { translations } = await languageManager.getTranslationsForUser(user.id);
+      const name = dbUser.firstName || translations.friend || 'صديقي';
+
       // Check if owner
       const isOwner = UIManager.isOwner(ctx.from.id);
 
       // Simple welcome message with keyboard
-      let message = `👋 مرحباً ${dbUser.firstName || 'صديقي'}!\n\n🎯 اختر من لوحة المفاتيح:`;
+      let message = (translations.welcome_user || '👋 مرحباً {name}!\n\n🎯 اختر من لوحة المفاتيح:').replace('{name}', name);
 
       if (isOwner) {
-        message = `👑 أهلاً بك يا مالك البوت ${dbUser.firstName}!\n\n⚡ لديك صلاحيات كاملة على النظام\n🎯 اختر من لوحة المفاتيح الخاصة:`;
+        message = (translations.owner_welcome || '👑 أهلاً بك يا مالك البوت {name}!\n\n⚡ لديك صلاحيات كاملة على النظام\n🎯 اختر من لوحة المفاتيح الخاصة:').replace('{name}', name);
       }
 
-      const keyboard = UIManager.mainReplyKeyboard(ctx.from.id);
+      const keyboard = UIManager.mainReplyKeyboard(ctx.from.id, translations);
 
       await ctx.reply(message, keyboard);
     } catch (error) {
@@ -34,13 +44,24 @@ class CommandHandler {
   }
 
   static async handleHelp(ctx) {
-    const helpMessage = `📚 **الأوامر المتاحة:**
+    const LanguageManager = require('../utils/languageManager');
+    let languageManager = global.languageManager;
+    if (!languageManager) {
+      languageManager = new LanguageManager();
+      global.languageManager = languageManager;
+    }
 
-/start - البدء
-/profile - ملفك
-/balance - رصيدك
-/daily - مكافأة يومية
-/leaderboard - الترتيب`;
+    const { translations } = await languageManager.getTranslationsForUser(ctx.from.id);
+
+    const lines = [
+      translations.help_start || '/start - البدء',
+      translations.help_profile || '/profile - ملفك',
+      translations.help_balance || '/balance - رصيدك',
+      translations.help_daily || '/daily - مكافأة يومية',
+      translations.help_leaderboard || '/leaderboard - الترتيب'
+    ];
+
+    const helpMessage = `${translations.help_title || '📚 الأوامر المتاحة:'}\n\n${lines.join('\n')}`;
 
     await ctx.reply(helpMessage);
   }

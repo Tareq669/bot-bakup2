@@ -15,6 +15,16 @@ const ReconnectManager = require('./utils/reconnect');
 const connectionMonitor = require('./utils/connectionMonitor');
 const healthMonitor = require('./utils/healthMonitor');
 const Formatter = require('./utils/formatter');
+const LanguageManager = require('./utils/languageManager');
+
+const languageManager = new LanguageManager();
+global.languageManager = languageManager;
+
+const getLabels = (key) => Object.values(languageManager.languages)
+  .map((lang) => lang.translations[key])
+  .filter(Boolean);
+
+const matchLabel = (key) => (text) => getLabels(key).includes(text);
 
 // Import AI Systems
 const AIManager = require('./ai/aiManager');
@@ -199,9 +209,8 @@ bot.command('transfer', async (ctx) => {
 // Multi-language
 bot.command('language', async (ctx) => {
   try {
-    const LanguageManager = require('./utils/languageManager');
-    const langManager = new LanguageManager();
-    const menu = langManager.getLanguagesMenu();
+    const { language } = await languageManager.getTranslationsForUser(ctx.from.id);
+    const menu = languageManager.getLanguagesMenu(language);
     ctx.reply(menu, { parse_mode: 'HTML' });
   } catch (error) {
     ctx.reply('❌ خدمة اللغات غير متاحة');
@@ -787,25 +796,13 @@ bot.action(/notify:(adhkar|prayer|games|rewards|events|stats)/, async (ctx) => {
 bot.action('new:language', async (ctx) => {
   const UIManager = require('./ui/keyboards');
   const keyboard = UIManager.languageMenuKeyboard();
-  await ctx.editMessageText(
-    '🌍 <b>إدارة اللغات</b>\n\n' +
-      '🇸🇦 <b>العربية</b> - العربية الفصحى (افتراضي)\n' +
-      '🇬🇧 <b>English</b> - الإنجليزية\n' +
-      '🇫🇷 <b>Français</b> - الفرنسية\n\n' +
-      '📊 اختر لغتك المفضلة',
-    { parse_mode: 'HTML', reply_markup: keyboard }
-  );
+  const { language } = await languageManager.getTranslationsForUser(ctx.from.id);
+  const message = languageManager.getLanguagesMenu(language);
+  await ctx.editMessageText(message, { parse_mode: 'HTML', reply_markup: keyboard });
 });
 
 bot.action(/lang:(ar|en|fr)/, async (ctx) => {
   const lang = ctx.match[1];
-  let languageManager = global.languageManager;
-  if (!languageManager) {
-    const LanguageManager = require('./utils/languageManager');
-    languageManager = new LanguageManager();
-    global.languageManager = languageManager;
-  }
-
   await languageManager.setUserLanguage(ctx.from.id, lang);
 
   const messages = {
@@ -814,7 +811,11 @@ bot.action(/lang:(ar|en|fr)/, async (ctx) => {
     fr: '✅ La langue a été changée en français'
   };
 
-  await ctx.reply(messages[lang], { parse_mode: 'HTML' });
+  const UIManager = require('./ui/keyboards');
+  const { translations } = await languageManager.getTranslationsForUser(ctx.from.id);
+  const keyboard = UIManager.mainReplyKeyboard(ctx.from.id, translations);
+
+  await ctx.reply(messages[lang], { parse_mode: 'HTML', reply_markup: keyboard.reply_markup });
   ctx.answerCbQuery('✅');
 });
 
@@ -1687,31 +1688,31 @@ bot.action('quote:share', async (ctx) => {
 });
 
 // --- KEYBOARD BUTTON HANDLERS ---
-bot.hears('🕌 الختمة', (ctx) => MenuHandler.handleKhatmaMenu(ctx));
-bot.hears('📿 الأذكار', (ctx) => MenuHandler.handleAdhkarMenu(ctx));
-bot.hears('📖 القرآن', (ctx) => MenuHandler.handleQuranMenu(ctx));
-bot.hears('💭 الاقتباسات', (ctx) => MenuHandler.handleQuotesMenu(ctx));
-bot.hears('✍️ الشعر', (ctx) => MenuHandler.handlePoetryMenu(ctx));
-bot.hears('🎮 الألعاب', (ctx) => MenuHandler.handleGamesMenu(ctx));
-bot.hears('💰 الاقتصاد', (ctx) => MenuHandler.handleEconomyMenu(ctx));
-bot.hears('👤 حسابي', (ctx) => MenuHandler.handleProfileMenu(ctx));
-bot.hears('🏆 المتصدرين', (ctx) => MenuHandler.handleLeaderboardMenu(ctx));
-bot.hears('⚙️ الإعدادات', (ctx) => MenuHandler.handleSettingsMenu(ctx));
-bot.hears('✨ الميزات', (ctx) => CommandHandler.handleFeaturesMenu(ctx));
-bot.hears('📚 المكتبة', (ctx) => CommandHandler.handleLibrary(ctx));
-bot.hears('📊 إحصائيات', (ctx) => CommandHandler.handleStats(ctx));
-bot.hears('🎁 المكافآت', (ctx) => CommandHandler.handleRewards(ctx));
-bot.hears('🛍️ المتجر', (ctx) => MenuHandler.handleShopMenu(ctx));
-bot.hears('💸 التحويلات والتبرعات', (ctx) => MenuHandler.handleTransfersMenu(ctx));
-bot.hears('🔔 الإشعارات الذكية', (ctx) => MenuHandler.handleSmartNotificationsMenu(ctx));
-bot.hears('🌍 إدارة اللغات', (ctx) => MenuHandler.handleLanguagesMenu(ctx));
-bot.hears('📁 النسخ الاحتياطية', (ctx) => MenuHandler.handleBackupsMenu(ctx));
-bot.hears('⚡ التخزين المؤقت', (ctx) => MenuHandler.handleCacheMenu(ctx));
-bot.hears('🛡️ حماية من الإساءة', (ctx) => MenuHandler.handleProtectionMenu(ctx));
-bot.hears('❌ إغلق', (ctx) => ctx.deleteMessage().catch(() => ctx.reply('✅ تم')));
+bot.hears(matchLabel('khatma'), (ctx) => MenuHandler.handleKhatmaMenu(ctx));
+bot.hears(matchLabel('adhkar'), (ctx) => MenuHandler.handleAdhkarMenu(ctx));
+bot.hears(matchLabel('quran'), (ctx) => MenuHandler.handleQuranMenu(ctx));
+bot.hears(matchLabel('quotes'), (ctx) => MenuHandler.handleQuotesMenu(ctx));
+bot.hears(matchLabel('poetry'), (ctx) => MenuHandler.handlePoetryMenu(ctx));
+bot.hears(matchLabel('games'), (ctx) => MenuHandler.handleGamesMenu(ctx));
+bot.hears(matchLabel('economy'), (ctx) => MenuHandler.handleEconomyMenu(ctx));
+bot.hears(matchLabel('profile'), (ctx) => MenuHandler.handleProfileMenu(ctx));
+bot.hears(matchLabel('leaderboard'), (ctx) => MenuHandler.handleLeaderboardMenu(ctx));
+bot.hears(matchLabel('settings'), (ctx) => MenuHandler.handleSettingsMenu(ctx));
+bot.hears(matchLabel('features'), (ctx) => CommandHandler.handleFeaturesMenu(ctx));
+bot.hears(matchLabel('library'), (ctx) => CommandHandler.handleLibrary(ctx));
+bot.hears(matchLabel('stats'), (ctx) => CommandHandler.handleStats(ctx));
+bot.hears(matchLabel('rewards'), (ctx) => CommandHandler.handleRewards(ctx));
+bot.hears(matchLabel('shop'), (ctx) => MenuHandler.handleShopMenu(ctx));
+bot.hears(matchLabel('transfers'), (ctx) => MenuHandler.handleTransfersMenu(ctx));
+bot.hears(matchLabel('smart_notifications'), (ctx) => MenuHandler.handleSmartNotificationsMenu(ctx));
+bot.hears(matchLabel('language_admin'), (ctx) => MenuHandler.handleLanguagesMenu(ctx));
+bot.hears(matchLabel('backups'), (ctx) => MenuHandler.handleBackupsMenu(ctx));
+bot.hears(matchLabel('cache'), (ctx) => MenuHandler.handleCacheMenu(ctx));
+bot.hears(matchLabel('protection'), (ctx) => MenuHandler.handleProtectionMenu(ctx));
+bot.hears(matchLabel('close'), (ctx) => ctx.deleteMessage().catch(() => ctx.reply('✅ تم')));
 
 // --- OWNER KEYBOARD BUTTON HANDLERS ---
-bot.hears('👑 لوحة المالك', async (ctx) => {
+bot.hears(matchLabel('owner_panel'), async (ctx) => {
   const UIManager = require('./ui/keyboards');
   if (UIManager.isOwner(ctx.from.id)) {
     await CommandHandler.handleOwnerPanel(ctx);

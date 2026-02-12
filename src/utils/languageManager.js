@@ -32,6 +32,36 @@ class LanguageManager {
    */
   getArabicTranslations() {
     return {
+      welcome_user: '👋 مرحباً {name}!\n\n🎯 اختر من لوحة المفاتيح:',
+      owner_welcome: '👑 أهلاً بك يا مالك البوت {name}!\n\n⚡ لديك صلاحيات كاملة على النظام\n🎯 اختر من لوحة المفاتيح الخاصة:',
+      friend: 'صديقي',
+      help_title: '📚 الأوامر المتاحة:',
+      help_start: '/start - البدء',
+      help_profile: '/profile - ملفك',
+      help_balance: '/balance - رصيدك',
+      help_daily: '/daily - مكافأة يومية',
+      help_leaderboard: '/leaderboard - الترتيب',
+      language_settings_title: '🌐 إعدادات اللغة',
+      languages_menu_title: '🌍 إدارة اللغات',
+      current_language: 'اللغة الحالية: {language}',
+      language_choose: 'اختر اللغة المفضلة للبوت من القائمة أدناه.',
+      languages_available: 'اللغات المتاحة:',
+      languages_note: '💡 سيتم تطبيق اللغة على الرسائل والقوائم الأساسية.',
+      khatma: '🕌 الختمة',
+      quotes: '💭 الاقتباسات',
+      poetry: '✍️ الشعر',
+      features: '✨ الميزات',
+      library: '📚 المكتبة',
+      transfers: '💸 التحويلات والتبرعات',
+      smart_notifications: '🔔 الإشعارات الذكية',
+      language_admin: '🌍 إدارة اللغات',
+      backups: '📁 النسخ الاحتياطية',
+      cache: '⚡ التخزين المؤقت',
+      protection: '🛡️ حماية من الإساءة',
+      stats: '📊 إحصائيات',
+      rewards: '🎁 المكافآت',
+      close: '❌ إغلق',
+      owner_panel: '👑 لوحة المالك',
       welcome: 'مرحباً بك في البوت الإسلامي! 🕌',
       start: 'اختر خياراً من القائمة أدناه:',
       help: 'هل تحتاج إلى مساعدة؟',
@@ -61,6 +91,36 @@ class LanguageManager {
    */
   getEnglishTranslations() {
     return {
+      welcome_user: '👋 Hello {name}!\n\n🎯 Choose from the keyboard:',
+      owner_welcome: '👑 Welcome, owner {name}!\n\n⚡ You have full system access\n🎯 Choose from the owner keyboard:',
+      friend: 'my friend',
+      help_title: '📚 Available commands:',
+      help_start: '/start - Start',
+      help_profile: '/profile - My profile',
+      help_balance: '/balance - My balance',
+      help_daily: '/daily - Daily reward',
+      help_leaderboard: '/leaderboard - Leaderboard',
+      language_settings_title: '🌐 Language Settings',
+      languages_menu_title: '🌍 Language Manager',
+      current_language: 'Current language: {language}',
+      language_choose: 'Choose your preferred bot language from the list below.',
+      languages_available: 'Available languages:',
+      languages_note: '💡 The language will be applied to core messages and menus.',
+      khatma: '🕌 Khatma',
+      quotes: '💭 Quotes',
+      poetry: '✍️ Poetry',
+      features: '✨ Features',
+      library: '📚 Library',
+      transfers: '💸 Transfers & Donations',
+      smart_notifications: '🔔 Smart Notifications',
+      language_admin: '🌍 Language Manager',
+      backups: '📁 Backups',
+      cache: '⚡ Cache',
+      protection: '🛡️ Abuse Protection',
+      stats: '📊 Stats',
+      rewards: '🎁 Rewards',
+      close: '❌ Close',
+      owner_panel: '👑 Owner Panel',
       welcome: 'Welcome to the Islamic Bot! 🕌',
       start: 'Choose an option from the menu below:',
       help: 'Need help?',
@@ -90,6 +150,36 @@ class LanguageManager {
    */
   getFrenchTranslations() {
     return {
+      welcome_user: '👋 Bonjour {name}!\n\n🎯 Choisissez depuis le clavier:',
+      owner_welcome: '👑 Bienvenue, proprietaire {name}!\n\n⚡ Vous avez un acces complet au systeme\n🎯 Choisissez depuis le clavier proprietaire:',
+      friend: 'mon ami',
+      help_title: '📚 Commandes disponibles:',
+      help_start: '/start - Demarrer',
+      help_profile: '/profile - Mon profil',
+      help_balance: '/balance - Mon solde',
+      help_daily: '/daily - Recompense quotidienne',
+      help_leaderboard: '/leaderboard - Classement',
+      language_settings_title: '🌐 Parametres de langue',
+      languages_menu_title: '🌍 Gestion des langues',
+      current_language: 'Langue actuelle: {language}',
+      language_choose: 'Choisissez la langue preferee du bot dans la liste ci-dessous.',
+      languages_available: 'Langues disponibles:',
+      languages_note: '💡 La langue sera appliquee aux messages et menus principaux.',
+      khatma: '🕌 Khatma',
+      quotes: '💭 Citations',
+      poetry: '✍️ Poesie',
+      features: '✨ Fonctionnalites',
+      library: '📚 Bibliotheque',
+      transfers: '💸 Transferts et Dons',
+      smart_notifications: '🔔 Notifications Intelligentes',
+      language_admin: '🌍 Gestion des langues',
+      backups: '📁 Sauvegardes',
+      cache: '⚡ Cache',
+      protection: '🛡️ Protection contre les abus',
+      stats: '📊 Statistiques',
+      rewards: '🎁 Recompenses',
+      close: '❌ Fermer',
+      owner_panel: '👑 Panneau Proprietaire',
       welcome: 'Bienvenue dans le bot islamique! 🕌',
       start: 'Choisissez une option dans le menu ci-dessous:',
       help: 'Besoin d\'aide?',
@@ -111,6 +201,18 @@ class LanguageManager {
       shop: '🛍️ Boutique',
       achievements: '🏅 Réalisations',
       notifications: '🔔 Notifications'
+    };
+  }
+
+  getTranslationsForLanguage(languageCode) {
+    return this.languages[languageCode]?.translations || this.languages.ar.translations;
+  }
+
+  async getTranslationsForUser(userId) {
+    const language = await this.getUserLanguage(userId);
+    return {
+      language,
+      translations: this.getTranslationsForLanguage(language)
     };
   }
 
@@ -161,14 +263,15 @@ class LanguageManager {
   /**
    * عرض قائمة اللغات
    */
-  getLanguagesMenu() {
-    let text = '🌐 <b>اختر اللغة / Choose Language / Choisir Langue</b>\n\n';
+  getLanguagesMenu(languageCode = 'ar') {
+    const translations = this.getTranslationsForLanguage(languageCode);
+    let text = `${translations.languages_menu_title}\n\n${translations.languages_available}\n`;
 
     for (const [code, lang] of Object.entries(this.languages)) {
-      text += `${lang.name}\n`;
+      text += `• ${lang.name}\n`;
     }
 
-    text += '\n💡 <i>سيتم تطبيق اللغة على جميع الرسائل</i>';
+    text += `\n${translations.language_choose}\n\n${translations.languages_note}`;
     return text;
   }
 
