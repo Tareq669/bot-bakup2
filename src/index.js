@@ -144,7 +144,6 @@ bot.command('coaching', async (ctx) => {
 
 bot.command('motivation', async (ctx) => {
   try {
-    const { User } = require('./database/models');
     const user = await User.findOne({ userId: ctx.from.id });
     if (user) {
       const motivation = IntegratedAI.generateMotivation(user);
@@ -322,7 +321,6 @@ bot.action('owner:banned', async (ctx) => {
       return ctx.answerCbQuery('? ??? ????');
     }
 
-    const { User } = require('./database/models');
     const banned = await User.find({ banned: true }).limit(20);
     
     let message = `?? <b>?????????? ????????? (${banned.length})</b>\n\n`;
@@ -411,7 +409,6 @@ bot.action('owner:richest', async (ctx) => {
       return ctx.answerCbQuery('? ??? ????');
     }
 
-    const { User } = require('./database/models');
     const richest = await User.find().sort({ coins: -1 }).limit(10);
     
     let message = `?? <b>???? 10 ????????</b>\n\n`;
@@ -526,7 +523,6 @@ bot.action('owner:cleanup', async (ctx) => {
       return ctx.answerCbQuery('? ??? ????');
     }
 
-    const { User } = require('./database/models');
     // Users inactive for more than 90 days
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
     const inactiveCount = await User.countDocuments({
@@ -570,7 +566,6 @@ bot.action('owner:cleanup:confirm', async (ctx) => {
       return ctx.answerCbQuery('? ??? ????');
     }
 
-    const { User } = require('./database/models');
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
     const result = await User.deleteMany({
       lastActiveDay: { $lt: ninetyDaysAgo }
@@ -731,7 +726,7 @@ bot.action('transfer:coins', async (ctx) => {
   await ctx.reply('?? <b>????? ?????</b>\n\n' +
     '???? ????? ???????? ???? ???? ??????? ??:\n\n' +
     '<code>@username</code> ?? <code>?????? ??????</code>',
-    { parse_mode: 'HTML' }
+  { parse_mode: 'HTML' }
   );
 });
 
@@ -779,7 +774,7 @@ bot.action(/notify:(adhkar|prayer|games|rewards|events|stats)/, async (ctx) => {
     case 'events':
       message = '?? ??????? ???????\n? ?????? ??????? ???????';
       break;
-    case 'stats':
+    case 'stats': {
       const userStats = await require('./database/db').User.findById(ctx.from.id);
       message = `?? <b>?????????</b>\n\n` +
         `?? ?????: ${userStats.coins}\n` +
@@ -787,6 +782,7 @@ bot.action(/notify:(adhkar|prayer|games|rewards|events|stats)/, async (ctx) => {
         `?? ??????? ???????: ${userStats.gamesPlayed}\n` +
         `?? ?????? ???????: ${userStats.quranPages} ????`;
       break;
+    }
   }
   
   await ctx.reply(message, { parse_mode: 'HTML' });
@@ -1153,7 +1149,6 @@ bot.action('stats:games', (ctx) => MenuHandler.handleStatsGames(ctx));
 bot.action(/admin:ban:(\d+)/, async (ctx) => {
   try {
     const userId = parseInt(ctx.match[1]);
-    const { User } = require('./database/models');
     const userToBan = await User.findOne({ userId });
 
     if (!userToBan) {
@@ -1177,7 +1172,6 @@ bot.action(/admin:ban:(\d+)/, async (ctx) => {
 bot.action(/admin:unban:(\d+)/, async (ctx) => {
   try {
     const userId = parseInt(ctx.match[1]);
-    const { User } = require('./database/models');
     const userToUnban = await User.findOne({ userId });
 
     if (!userToUnban) {
@@ -1763,7 +1757,6 @@ bot.on('text', async (ctx) => {
     // Handle admin awaiting input
     if (ctx.session && ctx.session.adminAwait) {
       const awaiting = ctx.session.adminAwait;
-      const { User } = require('./database/models');
 
       try {
         if (awaiting.type === 'searchUser') {
@@ -1951,7 +1944,6 @@ bot.on('text', async (ctx) => {
     // Handle owner awaiting input
     if (ctx.session && ctx.session.ownerAwait) {
       const awaiting = ctx.session.ownerAwait;
-      const { User } = require('./database/models');
       const UIManager = require('./ui/keyboards');
 
       if (!UIManager.isOwner(ctx.from.id)) {
@@ -2101,7 +2093,6 @@ bot.on('text', async (ctx) => {
     if (ctx.session && ctx.session.khatmaAwait) {
       const awaiting = ctx.session.khatmaAwait;
       try {
-        const { User } = require('./database/models');
         const user = await User.findOne({ userId: ctx.from.id });
         if (!user) return ctx.reply('? ?? ??? ?????? ??? ????');
 
@@ -2170,7 +2161,6 @@ bot.on('text', async (ctx) => {
     }
 
     if (message.includes('?????') || message.includes('motivation')) {
-      const { User } = require('./database/models');
       const user = await User.findOne({ userId: ctx.from.id });
       if (user) {
         const motivation = IntegratedAI.generateMotivation(user);
