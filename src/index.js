@@ -22,7 +22,6 @@ const LearningSystem = require('./ai/learningSystem');
 const SmartNotifications = require('./ai/smartNotifications');
 const AnalyticsEngine = require('./ai/analyticsEngine');
 const IntegratedAI = require('./ai/integratedAI');
-const ShopSystem = require('./economy/shopSystem');
 
 // Configure HTTPS Agent for Telegram API
 const httpsAgent = new https.Agent({
@@ -336,7 +335,6 @@ bot.action('owner:banned', async (ctx) => {
       });
     }
 
-    const Markup = require('telegraf/markup');
     const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'owner:panel')]]);
 
     try {
@@ -379,8 +377,6 @@ bot.action('owner:dbinfo', async (ctx) => {
       '📡 <b>الاتصال:</b>\n' +
       `• الحالة: ${  mongoose.connection.readyState === 1 ? '✅ متصل' : '❌ غير متصل'  }\n` +
       `• Host: ${  mongoose.connection.host}`;
-
-    const Markup = require('telegraf/markup');
     const keyboard = Markup.inlineKeyboard([
       [Markup.button.callback('🔄 تحديث', 'owner:dbinfo')],
       [Markup.button.callback('⬅️ رجوع', 'owner:database')]
@@ -421,8 +417,6 @@ bot.action('owner:richest', async (ctx) => {
       message += `   💰 ${u.coins.toLocaleString()} عملة\n`;
       message += `   ID: <code>${u.userId}</code>\n\n`;
     });
-
-    const Markup = require('telegraf/markup');
     const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'owner:economy')]]);
 
     try {
@@ -493,8 +487,6 @@ bot.action('owner:systems', async (ctx) => {
       '📊 <b>Node.js:</b>\n' +
       `• الإصدار: ${process.version}\n` +
       `• المنصة: ${process.platform}`;
-
-    const Markup = require('telegraf/markup');
     const keyboard = Markup.inlineKeyboard([
       [Markup.button.callback('🔄 تحديث', 'owner:systems')],
       [Markup.button.callback('⬅️ رجوع', 'owner:panel')]
@@ -538,7 +530,6 @@ bot.action('owner:cleanup', async (ctx) => {
       '⚠️ هل تريد حذفهم؟\n\n' +
       '⚠️ هذا الإجراء لا يمكن التراجع عنه!';
 
-    const Markup = require('telegraf/markup');
     const keyboard = Markup.inlineKeyboard([
       [
         Markup.button.callback('✅ نعم، احذف', 'owner:cleanup:confirm'),
@@ -657,7 +648,6 @@ bot.action('new:qgames', async (ctx) => {
 
 bot.action(/qgame:(gueverse|complete|spot|trivia|surah)/, async (ctx) => {
   ctx.answerCbQuery('🎮 جاري البدء بالعبة...');
-  const GameHandler = require('./commands/gameHandler');
   const GameManager = require('./games/quranicGames');
 
   const gameType = ctx.match[1];
@@ -759,8 +749,6 @@ bot.action('new:notifications', async (ctx) => {
 
 bot.action(/notify:(adhkar|prayer|games|rewards|events|stats)/, async (ctx) => {
   const type = ctx.match[1];
-  const notificationSystem = require('./features/notificationSystem');
-  const user = await require('./database/db').User.findById(ctx.from.id);
 
   let message = '';
   switch (type) {
@@ -812,7 +800,7 @@ bot.action('new:language', async (ctx) => {
 bot.action(/lang:(ar|en|fr)/, async (ctx) => {
   const lang = ctx.match[1];
   const languageManager = global.languageManager;
-  const result = await languageManager.setUserLanguage(ctx.from.id, lang);
+  await languageManager.setUserLanguage(ctx.from.id, lang);
 
   const messages = {
     ar: '✅ تم تغيير اللغة إلى العربية',
@@ -2545,7 +2533,7 @@ async function startBot() {
     });
 
     // معالجة أخطاء غير متوقعة
-    process.on('unhandledRejection', (reason, promise) => {
+    process.on('unhandledRejection', (reason, _promise) => {
       logger.error('❌ Promise Rejection غير معالج:', reason);
       logger.error('💡 Stack:', reason instanceof Error ? reason.stack : reason);
       healthMonitor.logError();
