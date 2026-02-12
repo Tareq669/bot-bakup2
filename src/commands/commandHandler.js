@@ -540,7 +540,7 @@ class CommandHandler {
       let stats = await ReferralSystem.getReferralStats(ctx.from.id);
 
       if (!stats.code) {
-        const codeResult = await ReferralSystem.generateReferralCode(ctx.from.id);
+        await ReferralSystem.generateReferralCode(ctx.from.id);
         stats = await ReferralSystem.getReferralStats(ctx.from.id);
       }
 
@@ -627,8 +627,6 @@ class CommandHandler {
 
   static async handleLibrary(ctx) {
     try {
-      const IslamicLibrary = require('../features/islamicLibrary');
-
       let message = '📚 <b>المكتبة الإسلامية</b>\n\n';
       message += 'اختر من الفئات:';
 
