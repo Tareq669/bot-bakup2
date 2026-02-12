@@ -166,6 +166,51 @@ class EconomyHandler {
       ctx.reply('❌ حدث خطأ');
     }
   }
+
+  static async handleTransferStats(ctx) {
+    try {
+      const Transaction = require('../database/models/Transaction');
+      const user = await User.findOne({ userId: ctx.from.id });
+
+      // Get transfer statistics
+      const sentTransfers = await Transaction.find({
+        userId: ctx.from.id,
+        type: 'transfer'
+      });
+
+      const receivedTransfers = await Transaction.find({
+        relatedUserId: ctx.from.id,
+        type: 'transfer'
+      });
+
+      const totalSent = sentTransfers.reduce((sum, t) => sum + t.amount, 0);
+      const totalReceived = receivedTransfers.reduce((sum, t) => sum + t.amount, 0);
+
+      const message = `💸 <b>إحصائيات التحويلات</b>
+
+📤 <b>التحويلات التي أرسلتها:</b>
+• العدد: ${sentTransfers.length}
+• المبلغ الإجمالي: ${totalSent} عملة
+
+📥 <b>التحويلات التي استقبلتها:</b>
+• العدد: ${receivedTransfers.length}
+• المبلغ الإجمالي: ${totalReceived} عملة
+
+💰 <b>الرصيد الحالي:</b> ${user.coins || 0} عملة`;
+
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('⬅️ رجوع', 'menu:economy')]
+      ]);
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (error) {
+      console.error('Error in handleTransferStats:', error);
+      ctx.reply('❌ حدث خطأ في عرض الإحصائيات');
+    }
+  }
 }
 
 module.exports = EconomyHandler;

@@ -1829,26 +1829,46 @@ bot.on('text', async (ctx) => {
         }
 
         if (awaiting.type === 'transfer') {
-          // Handle coin transfer
+          // Handle coin transfer - find target user
           const targetId = message.trim();
           let targetUser;
 
           if (/^\d+$/.test(targetId)) {
+            // Search by user ID
             targetUser = await User.findOne({ userId: parseInt(targetId) });
           } else if (targetId.startsWith('@')) {
-            targetUser = await User.findOne({ firstName: new RegExp(targetId.substring(1), 'i') });
+            // Search by @username
+            const usernameToFind = targetId.substring(1).toLowerCase();
+            targetUser = await User.findOne({ 
+              $or: [
+                { username: new RegExp(usernameToFind, 'i') },
+                { firstName: new RegExp(usernameToFind, 'i') }
+              ]
+            });
           } else {
-            targetUser = await User.findOne({ firstName: new RegExp(targetId, 'i') });
+            // Search by firstName or username
+            targetUser = await User.findOne({ 
+              $or: [
+                { firstName: new RegExp(targetId, 'i') },
+                { username: new RegExp(targetId, 'i') }
+              ]
+            });
           }
 
           ctx.session.ecoAwait = null;
 
           if (!targetUser) {
-            return ctx.reply('❌ لم يتم العثور على المستخدم');
+            return ctx.reply('❌ لم يتم العثور على المستخدم. حاول استخدام معرفك الرقمي أو اسمك');
           }
 
-          ctx.session.ecoAwait = { type: 'transferAmount', targetId: targetUser.userId, targetName: targetUser.firstName };
-          return ctx.reply(`💸 كم عملة تريد التحويل لـ ${targetUser.firstName}?\n\n(رصيدك: ${(await User.findOne({ userId: ctx.from.id })).coins || 0} عملة)`);
+          ctx.session.ecoAwait = { 
+            type: 'transferAmount', 
+            targetId: targetUser.userId, 
+            targetName: targetUser.firstName || targetUser.username || `المستخدم ${targetUser.userId}`
+          };
+          
+          const senderCoins = (await User.findOne({ userId: ctx.from.id })).coins || 0;
+          return ctx.reply(`💸 كم عملة تريد التحويل لـ ${targetUser.firstName || targetUser.username}?\n\n(رصيدك: ${senderCoins} عملة)`);
         }
 
         if (awaiting.type === 'transferAmount') {
@@ -1858,22 +1878,69 @@ bot.on('text', async (ctx) => {
           const receiver = await User.findOne({ userId: awaiting.targetId });
 
           if (isNaN(amount) || amount <= 0) {
-            return ctx.reply('❌ المبلغ غير صحيح');
+            return ctx.reply('❌ المبلغ غير صحيح. أدخل رقماً موجباً');
           }
 
-          if (!sender || sender.coins < amount) {
+          if (!sender || (sender.coins || 0) < amount) {
             ctx.session.ecoAwait = null;
             return ctx.reply('❌ رصيدك غير كافي');
           }
 
-          sender.coins -= amount;
-          receiver.coins += amount;
+          if (!receiver) {
+            ctx.session.ecoAwait = null;
+            return ctx.reply('❌ المستخدم المستقبل غير موجود');
+          }
 
+          if (sender.userId === receiver.userId) {
+            ctx.session.ecoAwait = null;
+            return ctx.reply('❌ لا يمكنك التحويل لنفسك');
+          }
+
+          // Perform transfer
+          sender.coins = (sender.coins || 0) - amount;
+          receiver.coins = (receiver.coins || 0) + amount;
+          
+          // Update transfer counts
+          sender.transfersCount = (sender.transfersCount || 0) + 1;
+          receiver.receivedTransfers = (receiver.receivedTransfers || 0) + 1;
+
+          // Save both users
           await sender.save();
           await receiver.save();
 
+          // Log transaction
+          const Transaction = require('./database/models/Transaction');
+          await Transaction.create({
+            userId: sender.userId,
+            type: 'transfer',
+            amount: amount,
+            reason: `تحويل لـ ${awaiting.targetName}`,
+            relatedUserId: receiver.userId,
+            status: 'completed'
+          });
+
           ctx.session.ecoAwait = null;
-          return ctx.reply(`✅ <b>تم التحويل بنجاح!</b>\n\n💸 حول ${amount} عملة لـ ${awaiting.targetName}\n💰 رصيدك الجديد: ${sender.coins} عملة`, { parse_mode: 'HTML' });
+          
+          // Notify sender
+          await ctx.reply(
+            `✅ <b>تم التحويل بنجاح!</b>\n\n` +
+            `💸 حولت ${amount} عملة لـ ${awaiting.targetName}\n` +
+            `💰 رصيدك الجديد: ${sender.coins} عملة`,
+            { parse_mode: 'HTML' }
+          );
+          
+          // Try to notify receiver
+          try {
+            await ctx.telegram.sendMessage(
+              receiver.userId,
+              `✅ <b>تلقيت تحويل!</b>\n\n` +
+              `💸 استقبلت ${amount} عملة من ${sender.firstName || 'مستخدم'}\n` +
+              `💰 رصيدك الجديد: ${receiver.coins} عملة`,
+              { parse_mode: 'HTML' }
+            );
+          } catch (notifyError) {
+            logger.warn('Could not notify receiver:', notifyError.message);
+          }
         }
       } catch (err) {
         console.error('Error handling ecoAwait input:', err);

@@ -254,6 +254,25 @@ const userSchema = new mongoose.Schema({
     }
   },
 
+  // Transfer and economy tracking
+  transfersCount: {
+    type: Number,
+    default: 0
+  },
+  receivedTransfers: {
+    type: Number,
+    default: 0
+  },
+  lastTransferDate: Date,
+  totalTransferred: {
+    type: Number,
+    default: 0
+  },
+  totalReceived: {
+    type: Number,
+    default: 0
+  },
+
   createdAt: {
     type: Date,
     default: Date.now
