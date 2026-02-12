@@ -1,7 +1,7 @@
 const Markup = require('telegraf/markup');
-const _ContentProvider = require('../content/contentProvider');
+const ContentProvider = require('../content/contentProvider');
 const UIManager = require('../ui/keyboards');
-const _Formatter = require('../ui/formatter');
+const Formatter = require('../ui/formatter');
 const { User } = require('../database/models');
 
 class MenuHandler {
@@ -264,6 +264,7 @@ ${user.khatmaProgress.percentComplete > 50 ? '🎯 أحسنت! أنت في ال�
   // Add pages to the user's khatma progress
   static async handleKhatmaAddPage(ctx, delta = 1) {
     try {
+      const { User } = require('../database/models');
       const KhatmaProvider = require('../content/khatmaProvider');
       const user = await User.findOne({ userId: ctx.from.id });
       if (!user) return ctx.reply('❌ لم يتم العثور على ملفك');
@@ -291,6 +292,7 @@ ${user.khatmaProgress.percentComplete > 50 ? '🎯 أحسنت! أنت في ال�
 
   static async handleKhatmaReset(ctx) {
     try {
+      const { User } = require('../database/models');
       const KhatmaProvider = require('../content/khatmaProvider');
       const user = await User.findOne({ userId: ctx.from.id });
       if (!user) return ctx.reply('❌ لم يتم العثور على ملفك');
@@ -313,6 +315,7 @@ ${user.khatmaProgress.percentComplete > 50 ? '🎯 أحسنت! أنت في ال�
   // Save current khatma snapshot for the user
   static async handleKhatmaSave(ctx) {
     try {
+      const { User } = require('../database/models');
       const user = await User.findOne({ userId: ctx.from.id });
       if (!user) return ctx.reply('❌ لم يتم العثور على ملفك');
 
@@ -806,6 +809,7 @@ ${rankMessage}
   // إعدادات عامة
   static async handleGeneralSettings(ctx) {
     try {
+      const { User } = require('../database/models');
       const userCount = await User.countDocuments();
 
       const message = '🔧 <b>الإعدادات العامة</b>\n\n' +
@@ -838,6 +842,7 @@ ${rankMessage}
   // إدارة المستخدمين
   static async handleUserManagement(ctx) {
     try {
+      const { User } = require('../database/models');
       const totalUsers = await User.countDocuments();
       const bannedUsers = await User.countDocuments({ isBanned: true });
       const activeToday = await User.countDocuments({
@@ -910,7 +915,7 @@ ${rankMessage}
   static async handleContentManagement(ctx) {
     try {
       const { Content } = require('../database/models');
-      const _contentCount = await Content.countDocuments().catch(() => 0);
+      const contentCount = await Content.countDocuments().catch(() => 0);
 
       const message = '📝 <b>إدارة المحتوى</b>\n\n' +
         '📚 <b>المحتوى المتاح:</b>\n' +
@@ -946,7 +951,7 @@ ${rankMessage}
   // إحصائيات البوت
   static async handleAdminStats(ctx) {
     try {
-      const { Transaction } = require('../database/models');
+      const { User, Transaction } = require('../database/models');
 
       const totalUsers = await User.countDocuments();
       const activeUsers = await User.countDocuments({
@@ -1069,6 +1074,7 @@ ${rankMessage}
 
   static async handleBanUsers(ctx) {
     try {
+      const { User } = require('../database/models');
       const bannedUsers = await User.find({ isBanned: true }).limit(10);
 
       let message = '🚫 <b>المستخدمون المحظورون</b>\n\n';
@@ -1190,7 +1196,7 @@ ${rankMessage}
   // معالج إحصائيات الاقتصاد
   static async handleStatsEconomy(ctx) {
     try {
-      const { Transaction } = require('../database/models');
+      const { User, Transaction } = require('../database/models');
 
       const topRich = await User.find().sort({ coins: -1 }).limit(5);
       const totalCoins = await User.aggregate([
@@ -1262,7 +1268,7 @@ ${rankMessage}
   static async handleContentStats(ctx) {
     try {
       const { Content } = require('../database/models');
-      const _contentCount = await Content.countDocuments().catch(() => 0);
+      const contentCount = await Content.countDocuments().catch(() => 0);
 
       const message = '📊 <b>إحصائيات المحتوى</b>\n\n' +
         '📚 <b>المحتوى المتاح:</b>\n' +
@@ -1294,6 +1300,7 @@ ${rankMessage}
 
   static async handleStatsUsers(ctx) {
     try {
+      const { User } = require('../database/models');
       const topUsers = await User.find()
         .sort({ xp: -1 })
         .limit(5)
@@ -1367,6 +1374,7 @@ ${rankMessage}
 
   static async handleShopMenu(ctx) {
     try {
+      const UIManager = require('../ui/keyboards');
       const message = `🛍️ <b>المتجر</b>
 
 مرحباً بك في متجر البوت! هنا يمكنك شراء:
@@ -1400,6 +1408,7 @@ ${rankMessage}
 
   static async handleTransfersMenu(ctx) {
     try {
+      const UIManager = require('../ui/keyboards');
       const message = `💸 <b>التحويلات والتبرعات</b>
 
 هنا يمكنك:
@@ -1431,6 +1440,7 @@ ${rankMessage}
 
   static async handleSmartNotificationsMenu(ctx) {
     try {
+      const UIManager = require('../ui/keyboards');
       const message = `🔔 <b>الإشعارات الذكية</b>
 
 يمكنك تفعيل:
@@ -1464,6 +1474,7 @@ ${rankMessage}
 
   static async handleLanguagesMenu(ctx) {
     try {
+      const UIManager = require('../ui/keyboards');
       const message = `🌍 <b>إدارة اللغات</b>
 
 اللغات المتاحة:
@@ -1496,6 +1507,7 @@ ${rankMessage}
 
   static async handleBackupsMenu(ctx) {
     try {
+      const UIManager = require('../ui/keyboards');
       const message = `📁 <b>النسخ الاحتياطية</b>
 
 يمكنك:
@@ -1528,6 +1540,7 @@ ${rankMessage}
 
   static async handleCacheMenu(ctx) {
     try {
+      const UIManager = require('../ui/keyboards');
       const message = `⚡ <b>التخزين المؤقت</b>
 
 معلومات عن نظام التخزين المؤقت:
@@ -1559,6 +1572,7 @@ ${rankMessage}
 
   static async handleProtectionMenu(ctx) {
     try {
+      const UIManager = require('../ui/keyboards');
       const message = `🛡️ <b>حماية من الإساءة</b>
 
 نظام الحماية يوفر:
