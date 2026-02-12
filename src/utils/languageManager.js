@@ -119,7 +119,7 @@ class LanguageManager {
    */
   async getUserLanguage(userId) {
     try {
-      const user = await User.findById(userId);
+      const user = await User.findOne({ userId });
       return user?.language || 'ar'; // العربية افتراضياً
     } catch (error) {
       logger.error(`خطأ في الحصول على لغة المستخدم: ${error.message}`);
@@ -136,7 +136,7 @@ class LanguageManager {
         return { success: false, message: 'اللغة غير مدعومة' };
       }
 
-      await User.findByIdAndUpdate(userId, { language: languageCode });
+      await User.findOneAndUpdate({ userId }, { language: languageCode });
       logger.info(`🌐 تم تغيير لغة المستخدم ${userId} إلى ${languageCode}`);
 
       return {
