@@ -2182,22 +2182,31 @@ let botStart = async () => {
     }
     
     // Launch bot (non-blocking, returns immediately)
-    bot.launch().then(() => {
-      reconnectManager.isConnected = true;
-      logger.info('✅ تم تشغيل البوت بنجاح!');
-      logger.info('✅ البوت يعمل الآن!');
-      logger.info('🎯 البوت مستعد و ينتظر الرسائل...');
-    }).catch((error) => {
-      logger.error('❌ فشل في بدء البوت:', error.message);
-      reconnectManager.isConnected = false;
-      
-      // Handle 409 Conflict error
-      if (error.response && error.response.error_code === 409) {
-        logger.error('💥 خطأ 409: يوجد نسخة أخرى من البوت تعمل!');
-        logger.error('📍 تأكد من إيقاف جميع النسخ الأخرى على Railway أو أي خدمة أخرى');
-        process.exit(1); // Exit to let the cloud service handle restart
-      }
-    });
+    bot.launch()
+      .then(() => {
+        reconnectManager.isConnected = true;
+        logger.info('✅ تم تشغيل البوت بنجاح!');
+        logger.info('✅ البوت يعمل الآن!');
+        logger.info('🎯 البوت مستعد و ينتظر الرسائل...');
+      })
+      .catch((error) => {
+        logger.error('❌ فشل في بدء البوت:', error.message);
+        logger.error('📋 تفاصيل الخطأ:', error);
+        reconnectManager.isConnected = false;
+        
+        // Handle 409 Conflict error
+        if (error.response && error.response.error_code === 409) {
+          logger.error('💥 خطأ 409: يوجد نسخة أخرى من البوت تعمل!');
+          logger.error('📍 تأكد من إيقاف جميع النسخ الأخرى على Railway أو أي خدمة أخرى');
+          process.exit(1); // Exit to let the cloud service handle restart
+        } else {
+          // For other errors, exit and let railway restart
+          logger.error('🔄 سيحاول النظام إعادة التشغيل تلقائياً...');
+          setTimeout(() => {
+            process.exit(1);
+          }, 2000);
+        }
+      });
     
     // Give it a moment to start
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -2322,23 +2331,49 @@ async function startBot() {
         logger.error('❌ Failed to start KhatmaScheduler:', err.message);
       }
 
-    // Graceful shutdown
+    // Graceful shutdown with timeout
     const gracefulShutdown = (signal) => {
       logger.info(`🛑 جاري إيقاف البوت... (${signal})`);
       
+      // Set a timeout to force exit if shutdown takes too long
+      const shutdownTimeout = setTimeout(() => {
+        logger.error('⏱️ انتهت مهلة الإيقاف، إيقاف قسري...');
+        process.exit(1);
+      }, 10000); // 10 second timeout
+      
       // Stop all services
       try {
-        if (khatmaScheduler) khatmaScheduler.stop();
-        reconnectManager.stop();
-        connectionMonitor.stopMonitoring();
-        healthMonitor.stopPeriodicCheck();
+        if (khatmaScheduler) {
+          khatmaScheduler.stop();
+          logger.info('✅ تم إيقاف KhatmaScheduler');
+        }
+        if (reconnectManager) {
+          reconnectManager.stop();
+          logger.info('✅ تم إيقاف ReconnectManager');
+        }
+        if (connectionMonitor) {
+          connectionMonitor.stopMonitoring();
+          logger.info('✅ تم إيقاف ConnectionMonitor');
+        }
+        if (healthMonitor) {
+          healthMonitor.stopPeriodicCheck();
+          logger.info('✅ تم إيقاف HealthMonitor');
+        }
       } catch (error) {
-        logger.error('خطأ أثناء إيقاف الخدمات:', error);
+        logger.error('خطأ أثناء إيقاف الخدمات:', error.message);
       }
       
       // Stop bot
-      bot.stop(signal);
-      process.exit(0);
+      try {
+        bot.stop(signal);
+        logger.info('✅ تم إيقاف البوت');
+        clearTimeout(shutdownTimeout);
+        process.exit(0);
+      } catch (error) {
+        logger.error('خطأ في إيقاف البوت:', error.message);
+        clearTimeout(shutdownTimeout);
+        process.exit(1);
+      }
     };
 
     process.once('SIGINT', () => gracefulShutdown('SIGINT'));
@@ -2350,6 +2385,10 @@ async function startBot() {
       healthMonitor.logError();
     });
 
+    // Track restart attempts to prevent infinite loops
+    let restartAttempts = 0;
+    const MAX_RESTART_ATTEMPTS = 3;
+
     process.on('uncaughtException', (error) => {
       logger.error('❌ استثناء غير معالج:', error);
       healthMonitor.logError();
@@ -2357,13 +2396,9 @@ async function startBot() {
       // في بيئة الإنتاج، دع السحابة تتعامل مع إعادة التشغيل
       if (process.env.NODE_ENV === 'production') {
         logger.error('💥 البوت سيتوقف. السحابة ستعيد تشغيله تلقائياً...');
-        process.exit(1);
-      } else {
-        // في بيئة التطوير، حاول إعادة التشغيل
-        logger.info('🔄 محاولة إعادة تشغيل البوت...');
         setTimeout(() => {
-          startBot();
-        }, 5000);
+          process.exit(1);
+        }, 1000);
       }
     });
 
