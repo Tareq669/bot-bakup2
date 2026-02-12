@@ -1,5 +1,5 @@
 ﻿require('dotenv').config();
-const { Telegraf, Context, session, Markup } = require('telegraf');
+const { Telegraf, session, Markup } = require('telegraf');
 const express = require('express');
 const https = require('https');
 const Database = require('./database/db');
@@ -7,12 +7,14 @@ const CommandHandler = require('./commands/commandHandler');
 const MenuHandler = require('./commands/menuHandler');
 const GameHandler = require('./commands/gameHandler');
 const EconomyHandler = require('./commands/economyHandler');
+const EconomyManager = require('./economy/economyManager');
 const ContentHandler = require('./commands/contentHandler');
 const ProfileHandler = require('./commands/profileHandler');
 const { logger } = require('./utils/helpers');
 const ReconnectManager = require('./utils/reconnect');
 const connectionMonitor = require('./utils/connectionMonitor');
 const healthMonitor = require('./utils/healthMonitor');
+const Formatter = require('./utils/formatter');
 
 // Import AI Systems
 const AIManager = require('./ai/aiManager');
@@ -45,24 +47,26 @@ const bot = new Telegraf(process.env.BOT_TOKEN, {
 bot.use(session());
 
 // --- SET BOT COMMANDS MENU ---
-bot.telegram.setMyCommands([
-  { command: 'start', description: '🏠 الرئيسية' },
-  { command: 'khatma', description: '🕌 الختمة' },
-  { command: 'adhkar', description: '📿 الأذكار' },
-  { command: 'quran', description: '📖 القرآن' },
-  { command: 'games', description: '🎮 الألعاب' },
-  { command: 'qgames', description: '🎯 الألعاب القرآنية' },
-  { command: 'economy', description: '💰 الاقتصاد' },
-  { command: 'shop', description: '🛍️ المتجر' },
-  { command: 'transfer', description: '📤 تحويل أموال' },
-  { command: 'profile', description: '👤 حسابي' },
-  { command: 'leaderboard', description: '🏆 المتصدرين' },
-  { command: 'language', description: '🌐 اللغة' },
-  { command: 'notifications', description: '🔔 الإشعارات' },
-  { command: 'help', description: '❓ المساعدة' }
-]).catch(err => {
-  logger.error('خطأ في تعيين قائمة الأوامر:', err);
-});
+bot.telegram
+  .setMyCommands([
+    { command: 'start', description: '🏠 الرئيسية' },
+    { command: 'khatma', description: '🕌 الختمة' },
+    { command: 'adhkar', description: '📿 الأذكار' },
+    { command: 'quran', description: '📖 القرآن' },
+    { command: 'games', description: '🎮 الألعاب' },
+    { command: 'qgames', description: '🎯 الألعاب القرآنية' },
+    { command: 'economy', description: '💰 الاقتصاد' },
+    { command: 'shop', description: '🛍️ المتجر' },
+    { command: 'transfer', description: '📤 تحويل أموال' },
+    { command: 'profile', description: '👤 حسابي' },
+    { command: 'leaderboard', description: '🏆 المتصدرين' },
+    { command: 'language', description: '🌐 اللغة' },
+    { command: 'notifications', description: '🔔 الإشعارات' },
+    { command: 'help', description: '❓ المساعدة' }
+  ])
+  .catch((err) => {
+    logger.error('خطأ في تعيين قائمة الأوامر:', err);
+  });
 
 // Error handling for bot
 bot.catch((err, ctx) => {
@@ -74,11 +78,11 @@ bot.catch((err, ctx) => {
 
   logger.error('❌ خطأ في البوت:', err);
   healthMonitor.logError();
-  
+
   // حاول الرد على المستخدم
   try {
     if (ctx && ctx.reply && err.code !== 409) {
-      ctx.reply('❌ حدث خطأ غير متوقع، جاري محاولة الإصلاح...').catch(e => {
+      ctx.reply('❌ حدث خطأ غير متوقع، جاري محاولة الإصلاح...').catch((e) => {
         logger.error('فشل الرد على الخطأ:', e.message);
       });
     }
@@ -180,13 +184,12 @@ bot.command('shop', async (ctx) => {
 // Payment & Transfer
 bot.command('transfer', async (ctx) => {
   try {
-    const PaymentSystem = require('./features/paymentSystem');
     const msg = ctx.message.text.split(' ');
-    
+
     if (msg.length < 3) {
       return ctx.reply('استخدم: /transfer @username amount\nمثال: /transfer @user 100');
     }
-    
+
     ctx.reply('🔄 جاري معالجة التحويل...');
   } catch (error) {
     ctx.reply('❌ حدث خطأ في التحويل');
@@ -208,10 +211,7 @@ bot.command('language', async (ctx) => {
 // Notifications Management
 bot.command('notifications', async (ctx) => {
   try {
-    const msg = `🔔 <b>إدارة الإشعارات</b>\n\n`;
-    const msg2 = msg + `${ctx.message.from.first_name}\n\n`;
-    const msg3 = msg2 + `استخدم الخيارات التالية:\n`;
-    const msg4 = msg3 + `✅ تفعيل\n❌ تعطيل\n\n/notif on|off`;
+    const msg4 = `🔔 <b>إدارة الإشعارات</b>\n\n${ctx.message.from.first_name}\n\nاستخدم الخيارات التالية:\n✅ تفعيل\n❌ تعطيل\n\n/notif on|off`;
     ctx.reply(msg4, { parse_mode: 'HTML' });
   } catch (error) {
     ctx.reply('❌ خدمة الإشعارات غير متاحة');
@@ -221,16 +221,16 @@ bot.command('notifications', async (ctx) => {
 // Backup System
 bot.command('backup', async (ctx) => {
   const ownerIds = (process.env.BOT_OWNERS || '').split(',').filter(Boolean).map(Number);
-  
+
   if (!ownerIds.includes(ctx.from.id)) {
     return ctx.reply('❌ ليس لديك صلاحية');
   }
-  
+
   try {
     const BackupSystem = require('./utils/backupSystem');
     const backup = new BackupSystem();
     const result = await backup.backupUsers();
-    
+
     if (result.success) {
       ctx.reply(`✅ تم النسخ الاحتياطية!\n📦 ${result.filename}\n👥 ${result.count} مستخدم`);
     } else {
@@ -255,7 +255,7 @@ bot.command('qgames', async (ctx) => {
 // --- ADMIN COMMANDS ---
 bot.command('health', async (ctx) => {
   const ownerIds = (process.env.BOT_OWNERS || '').split(',').filter(Boolean).map(Number);
-  
+
   if (ownerIds.includes(ctx.from.id)) {
     const report = healthMonitor.getFullReport();
     await ctx.reply(report, { parse_mode: 'Markdown' });
@@ -267,32 +267,32 @@ bot.command('health', async (ctx) => {
 bot.command('myid', async (ctx) => {
   const ownerIds = (process.env.BOT_OWNERS || '').split(',').filter(Boolean).map(Number);
   const isOwner = ownerIds.includes(ctx.from.id);
-  
+
   await ctx.reply(
-    `🆔 <b>معلومات حسابك</b>\n\n` +
-    `👤 الاسم: ${ctx.from.first_name || 'غير متوفر'}\n` +
-    `🔢 Telegram ID: <code>${ctx.from.id}</code>\n` +
-    `👨‍💼 اليوزر: ${ctx.from.username ? '@' + ctx.from.username : 'غير متوفر'}\n` +
-    `${isOwner ? '👑 <b>أنت مالك البوت</b>' : ''}`,
+    '🆔 <b>معلومات حسابك</b>\n\n' +
+      `👤 الاسم: ${  ctx.from.first_name || 'غير متوفر'  }\n` +
+      `🔢 Telegram ID: <code>${  ctx.from.id  }</code>\n` +
+      `👨‍💼 اليوزر: ${  ctx.from.username ? `@${  ctx.from.username}` : 'غير متوفر'  }\n${
+        isOwner ? '👑 <b>أنت مالك البوت</b>' : ''}`,
     { parse_mode: 'HTML' }
   );
 });
 
 bot.command('owners', async (ctx) => {
   const ownerIds = (process.env.BOT_OWNERS || '').split(',').filter(Boolean).map(Number);
-  
+
   if (!ownerIds.includes(ctx.from.id)) {
     return ctx.reply('❌ ليس لديك صلاحية لهذا الأمر');
   }
-  
+
   await ctx.reply(
-    `👑 <b>مالكي البوت</b>\n\n` +
-    `IDs: <code>${ownerIds.join(', ')}</code>\n\n` +
-    `📝 لإضافة مالك جديد:\n` +
-    `1. اطلب منه إرسال /myid للبوت\n` +
-    `2. أضف ID الخاص به في ملف .env\n` +
-    `3. BOT_OWNERS=ID1,ID2,ID3\n` +
-    `4. أعد تشغيل البوت`,
+    '👑 <b>مالكي البوت</b>\n\n' +
+      `IDs: <code>${  ownerIds.join(', ')  }</code>\n\n` +
+      '📝 لإضافة مالك جديد:\n' +
+      '1. اطلب منه إرسال /myid للبوت\n' +
+      '2. أضف ID الخاص به في ملف .env\n' +
+      '3. BOT_OWNERS=ID1,ID2,ID3\n' +
+      '4. أعد تشغيل البوت',
     { parse_mode: 'HTML' }
   );
 });
@@ -322,23 +322,21 @@ bot.action('owner:banned', async (ctx) => {
 
     const { User } = require('./database/models');
     const banned = await User.find({ banned: true }).limit(20);
-    
+
     let message = `🚫 <b>المستخدمون المحظورون (${banned.length})</b>\n\n`;
-    
+
     if (banned.length === 0) {
       message += 'لا يوجد مستخدمون محظورون حالياً';
     } else {
       banned.forEach((u, i) => {
         message += `${i + 1}. ${u.firstName}\n`;
         message += `   ID: <code>${u.userId}</code>\n`;
-        message += `   السبب: ${u.bannedReason || 'غير محدد'}\n\n`;
+        message += `   السبب: ${u.banReason || 'غير محدد'}\n\n`;
       });
     }
 
     const Markup = require('telegraf/markup');
-    const keyboard = Markup.inlineKeyboard([
-      [Markup.button.callback('⬅️ رجوع', 'owner:panel')]
-    ]);
+    const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'owner:panel')]]);
 
     try {
       await ctx.editMessageText(message, {
@@ -367,18 +365,19 @@ bot.action('owner:dbinfo', async (ctx) => {
 
     const mongoose = require('mongoose');
     const dbStats = await mongoose.connection.db.stats();
-    
-    const message = `🗄️ <b>معلومات قاعدة البيانات</b>\n\n` +
-      `📊 <b>الإحصائيات:</b>\n` +
-      `• الاسم: ${mongoose.connection.db.databaseName}\n` +
-      `• الحجم: ${(dbStats.dataSize / 1024 / 1024).toFixed(2)} MB\n` +
-      `• حجم التخزين: ${(dbStats.storageSize / 1024 / 1024).toFixed(2)} MB\n` +
-      `• عدد المستندات: ${dbStats.objects}\n` +
-      `• المجموعات: ${dbStats.collections}\n` +
-      `• الفهارس: ${dbStats.indexes}\n\n` +
-      `📡 <b>الاتصال:</b>\n` +
-      `• الحالة: ${mongoose.connection.readyState === 1 ? '✅ متصل' : '❌ غير متصل'}\n` +
-      `• Host: ${mongoose.connection.host}`;
+
+    const message =
+      '🗄️ <b>معلومات قاعدة البيانات</b>\n\n' +
+      '📊 <b>الإحصائيات:</b>\n' +
+      `• الاسم: ${  mongoose.connection.db.databaseName  }\n` +
+      `• الحجم: ${  (dbStats.dataSize / 1024 / 1024).toFixed(2)  } MB\n` +
+      `• حجم التخزين: ${  (dbStats.storageSize / 1024 / 1024).toFixed(2)  } MB\n` +
+      `• عدد المستندات: ${  dbStats.objects  }\n` +
+      `• المجموعات: ${  dbStats.collections  }\n` +
+      `• الفهارس: ${  dbStats.indexes  }\n\n` +
+      '📡 <b>الاتصال:</b>\n' +
+      `• الحالة: ${  mongoose.connection.readyState === 1 ? '✅ متصل' : '❌ غير متصل'  }\n` +
+      `• Host: ${  mongoose.connection.host}`;
 
     const Markup = require('telegraf/markup');
     const keyboard = Markup.inlineKeyboard([
@@ -413,8 +412,8 @@ bot.action('owner:richest', async (ctx) => {
 
     const { User } = require('./database/models');
     const richest = await User.find().sort({ coins: -1 }).limit(10);
-    
-    let message = `💰 <b>أغنى 10 مستخدمين</b>\n\n`;
+
+    let message = '💰 <b>أغنى 10 مستخدمين</b>\n\n';
     richest.forEach((u, i) => {
       const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
       message += `${medal} ${u.firstName}\n`;
@@ -423,9 +422,7 @@ bot.action('owner:richest', async (ctx) => {
     });
 
     const Markup = require('telegraf/markup');
-    const keyboard = Markup.inlineKeyboard([
-      [Markup.button.callback('⬅️ رجوع', 'owner:economy')]
-    ]);
+    const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'owner:economy')]]);
 
     try {
       await ctx.editMessageText(message, {
@@ -454,12 +451,12 @@ bot.action('owner:rewardall', async (ctx) => {
 
     ctx.session = ctx.session || {};
     ctx.session.ownerAwait = { type: 'rewardall' };
-    
+
     await ctx.answerCbQuery('✅ جاهز');
     await ctx.reply(
-      `🎁 <b>مكافأة جماعية</b>\n\n` +
-      `اكتب المبلغ الذي تريد إعطاءه لجميع المستخدمين:\n\n` +
-      `❌ اكتب /cancel للإلغاء`,
+      '🎁 <b>مكافأة جماعية</b>\n\n' +
+        'اكتب المبلغ الذي تريد إعطاءه لجميع المستخدمين:\n\n' +
+        '❌ اكتب /cancel للإلغاء',
       { parse_mode: 'HTML' }
     );
   } catch (error) {
@@ -480,18 +477,19 @@ bot.action('owner:systems', async (ctx) => {
     const uptime = process.uptime();
     const memory = process.memoryUsage();
 
-    const message = `⚡ <b>حالة الأنظمة</b>\n\n` +
-      `🤖 <b>البوت:</b>\n` +
-      `• الحالة: ✅ يعمل\n` +
+    const message =
+      '⚡ <b>حالة الأنظمة</b>\n\n' +
+      '🤖 <b>البوت:</b>\n' +
+      '• الحالة: ✅ يعمل\n' +
       `• وقت التشغيل: ${Math.floor(uptime / 60)} دقيقة\n` +
       `• PID: ${process.pid}\n\n` +
-      `💾 <b>الذاكرة:</b>\n` +
+      '💾 <b>الذاكرة:</b>\n' +
       `• المستخدمة: ${(memory.heapUsed / 1024 / 1024).toFixed(2)} MB\n` +
       `• المجموع: ${(memory.heapTotal / 1024 / 1024).toFixed(2)} MB\n` +
       `• RSS: ${(memory.rss / 1024 / 1024).toFixed(2)} MB\n\n` +
-      `🗄️ <b>قاعدة البيانات:</b>\n` +
+      '🗄️ <b>قاعدة البيانات:</b>\n' +
       `• الحالة: ${mongoose.connection.readyState === 1 ? '✅ متصل' : '❌ غير متصل'}\n\n` +
-      `📊 <b>Node.js:</b>\n` +
+      '📊 <b>Node.js:</b>\n' +
       `• الإصدار: ${process.version}\n` +
       `• المنصة: ${process.platform}`;
 
@@ -533,10 +531,11 @@ bot.action('owner:cleanup', async (ctx) => {
       lastActiveDay: { $lt: ninetyDaysAgo }
     });
 
-    const message = `🗑️ <b>تنظيف البيانات</b>\n\n` +
+    const message =
+      '🗑️ <b>تنظيف البيانات</b>\n\n' +
       `المستخدمون الغير نشطين (أكثر من 90 يوم): ${inactiveCount}\n\n` +
-      `⚠️ هل تريد حذفهم؟\n\n` +
-      `⚠️ هذا الإجراء لا يمكن التراجع عنه!`;
+      '⚠️ هل تريد حذفهم؟\n\n' +
+      '⚠️ هذا الإجراء لا يمكن التراجع عنه!';
 
     const Markup = require('telegraf/markup');
     const keyboard = Markup.inlineKeyboard([
@@ -578,8 +577,7 @@ bot.action('owner:cleanup:confirm', async (ctx) => {
 
     await ctx.answerCbQuery(`✅ تم حذف ${result.deletedCount} مستخدم`);
     await ctx.editMessageText(
-      `✅ <b>تمت عملية التنظيف</b>\n\n` +
-      `عدد المستخدمين المحذوفين: ${result.deletedCount}`,
+      '✅ <b>تمت عملية التنظيف</b>\n\n' + `عدد المستخدمين المحذوفين: ${result.deletedCount}`,
       { parse_mode: 'HTML' }
     );
   } catch (error) {
@@ -619,14 +617,14 @@ bot.action('menu:newfeatures', async (ctx) => {
   const keyboard = UIManager.newFeaturesMenuKeyboard();
   await ctx.editMessageText(
     '✨ <b>المميزات الجديدة في البوت</b>\n\n' +
-    '🎮 <b>الألعاب القرآنية</b> - ألعاب تفاعلية قرآنية ممتعة\n' +
-    '🛍️ <b>المتجر المتقدم</b> - أوسمة وجوائز وأدوات\n' +
-    '💸 <b>النظام المالي</b> - تحويلات وتبرعات\n' +
-    '🔔 <b>الإشعارات الذكية</b> - تنبيهات شخصية مخصصة\n' +
-    '🌍 <b>اللغات المتعددة</b> - عربي وإنجليزي وفرنسي\n' +
-    '📁 <b>النسخ الاحتياطية</b> - حفظ البيانات تلقائياً\n' +
-    '⚡ <b>نظام التخزين المؤقت</b> - أداء أسرع\n' +
-    '🛡️ <b>حماية من الإساءة</b> - أمان معزز',
+      '🎮 <b>الألعاب القرآنية</b> - ألعاب تفاعلية قرآنية ممتعة\n' +
+      '🛍️ <b>المتجر المتقدم</b> - أوسمة وجوائز وأدوات\n' +
+      '💸 <b>النظام المالي</b> - تحويلات وتبرعات\n' +
+      '🔔 <b>الإشعارات الذكية</b> - تنبيهات شخصية مخصصة\n' +
+      '🌍 <b>اللغات المتعددة</b> - عربي وإنجليزي وفرنسي\n' +
+      '📁 <b>النسخ الاحتياطية</b> - حفظ البيانات تلقائياً\n' +
+      '⚡ <b>نظام التخزين المؤقت</b> - أداء أسرع\n' +
+      '🛡️ <b>حماية من الإساءة</b> - أمان معزز',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
@@ -634,11 +632,10 @@ bot.action('menu:newfeatures', async (ctx) => {
 bot.action('menu:premiumfeatures', async (ctx) => {
   const UIManager = require('./ui/keyboards');
   const keyboard = UIManager.premiumFeaturesKeyboard();
-  await ctx.editMessageText(
-    '💎 <b>الميزات المميزة</b>\n\n' +
-    'قريباً: ميزات احترافية حصرية',
-    { parse_mode: 'HTML', reply_markup: keyboard }
-  );
+  await ctx.editMessageText('💎 <b>الميزات المميزة</b>\n\n' + 'قريباً: ميزات احترافية حصرية', {
+    parse_mode: 'HTML',
+    reply_markup: keyboard
+  });
 });
 
 // --- NEW QGAMES ACTIONS ---
@@ -647,12 +644,12 @@ bot.action('new:qgames', async (ctx) => {
   const keyboard = UIManager.quranicGamesKeyboard();
   await ctx.editMessageText(
     '🎮 <b>الألعاب القرآنية</b>\n\n' +
-    '1️⃣ <b>تخمين الآية</b> - خمّن الآية من الآيات الأربعة\n' +
-    '2️⃣ <b>إكمال الآية</b> - أكمل الآية الناقصة\n' +
-    '3️⃣ <b>اكتشف الفرق</b> - جد الفرق بين آيتين\n' +
-    '4️⃣ <b>ثلاثيات قرآنية</b> - أجب على أسئلة قرآنية\n' +
-    '5️⃣ <b>عد السور</b> - عد السور المذكورة\n\n' +
-    '💰 كل لعبة توفر <b>10-20 عملة</b> عند النجاح!',
+      '1️⃣ <b>تخمين الآية</b> - خمّن الآية من الآيات الأربعة\n' +
+      '2️⃣ <b>إكمال الآية</b> - أكمل الآية الناقصة\n' +
+      '3️⃣ <b>اكتشف الفرق</b> - جد الفرق بين آيتين\n' +
+      '4️⃣ <b>ثلاثيات قرآنية</b> - أجب على أسئلة قرآنية\n' +
+      '5️⃣ <b>عد السور</b> - عد السور المذكورة\n\n' +
+      '💰 كل لعبة توفر <b>10-20 عملة</b> عند النجاح!',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
@@ -661,27 +658,25 @@ bot.action(/qgame:(gueverse|complete|spot|trivia|surah)/, async (ctx) => {
   ctx.answerCbQuery('🎮 جاري البدء بالعبة...');
   const GameHandler = require('./commands/gameHandler');
   const GameManager = require('./games/quranicGames');
-  
+
   const gameType = ctx.match[1];
   const games = {
-    'gueverse': 'guessTheVerse',
-    'complete': 'completeTheVerse',
-    'spot': 'spotTheDifference',
-    'trivia': 'qurranTrivia',
-    'surah': 'surahCount'
+    gueverse: 'guessTheVerse',
+    complete: 'completeTheVerse',
+    spot: 'spotTheDifference',
+    trivia: 'qurranTrivia',
+    surah: 'surahCount'
   };
-  
+
   const result = await GameManager[games[gameType]](ctx.from.id);
   if (result.success) {
-    let message = result.question;
+    const message = result.question;
     const keyboard = Markup.inlineKeyboard(
-      result.options.map(opt => [
-        Markup.button.callback(opt, `qgameans:${gameType}:${opt}`)
-      ])
+      result.options.map((opt) => [Markup.button.callback(opt, `qgameans:${gameType}:${opt}`)])
     );
     await ctx.reply(message, { parse_mode: 'HTML', reply_markup: keyboard });
   } else {
-    await ctx.reply('❌ ' + result.message);
+    await ctx.reply(`❌ ${  result.message}`);
   }
 });
 
@@ -691,11 +686,11 @@ bot.action('new:shop', async (ctx) => {
   const keyboard = UIManager.shopMenuKeyboard();
   await ctx.editMessageText(
     '🛍️ <b>متجر البوت المتقدم</b>\n\n' +
-    '👑 <b>الأوسمة</b> - أوسمة عادية VIP وأسطورية\n' +
-    '⚡ <b>المعززات</b> - معززات لعبتك بـ 2x و3x\n' +
-    '🎁 <b>الجوائز</b> - جوائز حصرية\n' +
-    '🎮 <b>أدوات الألعاب</b> - كنوز وأدوات خاصة\n\n' +
-    '💰 <b>الرصيد:</b> استخدم <code>/balance</code>',
+      '👑 <b>الأوسمة</b> - أوسمة عادية VIP وأسطورية\n' +
+      '⚡ <b>المعززات</b> - معززات لعبتك بـ 2x و3x\n' +
+      '🎁 <b>الجوائز</b> - جوائز حصرية\n' +
+      '🎮 <b>أدوات الألعاب</b> - كنوز وأدوات خاصة\n\n' +
+      '💰 <b>الرصيد:</b> استخدم <code>/balance</code>',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
@@ -704,7 +699,7 @@ bot.action('shop:all', async (ctx) => {
   const shopSystem = require('./features/shopSystem');
   const items = shopSystem.getAllShopItems();
   let message = '🛍️ <b>كل العناصر المتاحة</b>\n\n';
-  items.forEach(item => {
+  items.forEach((item) => {
     message += `${item.emoji} <b>${item.name}</b>\n💰 ${item.price} عملة\n${item.description}\n\n`;
   });
   const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'new:shop')]]);
@@ -717,11 +712,11 @@ bot.action('new:transfer', async (ctx) => {
   const keyboard = UIManager.transferMenuKeyboard();
   await ctx.editMessageText(
     '💸 <b>نظام التحويلات والتبرعات</b>\n\n' +
-    '💸 <b>تحويل عملات</b> - حول عملاتك لأصدقائك\n' +
-    '⭐ <b>تحويل نقاط</b> - شارك نقاطك\n' +
-    '💝 <b>تبرع خيري</b> - تُرجع لمسكين\n' +
-    '📊 <b>السجل</b> - شاهد تحويلاتك\n\n' +
-    '✅ آمن وموثوق 100%',
+      '💸 <b>تحويل عملات</b> - حول عملاتك لأصدقائك\n' +
+      '⭐ <b>تحويل نقاط</b> - شارك نقاطك\n' +
+      '💝 <b>تبرع خيري</b> - تُرجع لمسكين\n' +
+      '📊 <b>السجل</b> - شاهد تحويلاتك\n\n' +
+      '✅ آمن وموثوق 100%',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
@@ -729,9 +724,10 @@ bot.action('new:transfer', async (ctx) => {
 bot.action('transfer:coins', async (ctx) => {
   ctx.session = ctx.session || {};
   ctx.session.ecoAwait = { type: 'transfer' };
-  await ctx.reply('💸 <b>تحويل عملات</b>\n\n' +
-    'أدخل معرّف المستخدم الذي تريد التحويل له:\n\n' +
-    '<code>@username</code> أو <code>معرّفه الرقمي</code>',
+  await ctx.reply(
+    '💸 <b>تحويل عملات</b>\n\n' +
+      'أدخل معرّف المستخدم الذي تريد التحويل له:\n\n' +
+      '<code>@username</code> أو <code>معرّفه الرقمي</code>',
     { parse_mode: 'HTML' }
   );
 });
@@ -739,7 +735,9 @@ bot.action('transfer:coins', async (ctx) => {
 bot.action('transfer:charity', async (ctx) => {
   ctx.session = ctx.session || {};
   ctx.session.ecoAwait = { type: 'donate' };
-  await ctx.reply('💝 <b>تبرع خيري</b>\n\nأدخل المبلغ والجهة (اختياري):\nمثال: 100 مساعدة محتاج', { parse_mode: 'HTML' });
+  await ctx.reply('💝 <b>تبرع خيري</b>\n\nأدخل المبلغ والجهة (اختياري):\nمثال: 100 مساعدة محتاج', {
+    parse_mode: 'HTML'
+  });
 });
 
 // --- NEW NOTIFICATIONS ACTIONS ---
@@ -748,12 +746,12 @@ bot.action('new:notifications', async (ctx) => {
   const keyboard = UIManager.notificationsMenuKeyboard();
   await ctx.editMessageText(
     '🔔 <b>الإشعارات الذكية</b>\n\n' +
-    '🕌 <b>إشعارات الأذكار</b> - تنبيهات يومية\n' +
-    '⏰ <b>إشعارات الصلaة</b> - مواقيت الصلاة\n' +
-    '🎮 <b>إشعارات الألعاب</b> - تذكر بالألعاب\n' +
-    '💰 <b>إشعارات المكافآت</b> - عروض خاصة\n' +
-    '🔔 <b>إشعارات الأحداث</b> - أحداث جديدة\n\n' +
-    '⚙️ اختر الإشعارات التي تريدها',
+      '🕌 <b>إشعارات الأذكار</b> - تنبيهات يومية\n' +
+      '⏰ <b>إشعارات الصلaة</b> - مواقيت الصلاة\n' +
+      '🎮 <b>إشعارات الألعاب</b> - تذكر بالألعاب\n' +
+      '💰 <b>إشعارات المكافآت</b> - عروض خاصة\n' +
+      '🔔 <b>إشعارات الأحداث</b> - أحداث جديدة\n\n' +
+      '⚙️ اختر الإشعارات التي تريدها',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
@@ -762,9 +760,9 @@ bot.action(/notify:(adhkar|prayer|games|rewards|events|stats)/, async (ctx) => {
   const type = ctx.match[1];
   const notificationSystem = require('./features/notificationSystem');
   const user = await require('./database/db').User.findById(ctx.from.id);
-  
+
   let message = '';
-  switch(type) {
+  switch (type) {
     case 'adhkar':
       message = '🕌 إشعارات الأذكار مفعلة\n✅ ستتلقى تنبيهات يومية بالأذكار';
       break;
@@ -780,16 +778,18 @@ bot.action(/notify:(adhkar|prayer|games|rewards|events|stats)/, async (ctx) => {
     case 'events':
       message = '🔔 إشعارات الأحداث\n✅ ستتلقى تنبيهات الأحداث';
       break;
-    case 'stats':
+    case 'stats': {
       const userStats = await require('./database/db').User.findById(ctx.from.id);
-      message = `📊 <b>إحصائياتك</b>\n\n` +
+      message =
+        '📊 <b>إحصائياتك</b>\n\n' +
         `💰 عملات: ${userStats.coins}\n` +
         `⭐ نقاط: ${userStats.xp}\n` +
         `🎮 الألعاب المكملة: ${userStats.gamesPlayed}\n` +
         `📖 القرآن المقروء: ${userStats.quranPages} صفحة`;
       break;
+    }
   }
-  
+
   await ctx.reply(message, { parse_mode: 'HTML' });
   ctx.answerCbQuery('✅ تم');
 });
@@ -800,10 +800,10 @@ bot.action('new:language', async (ctx) => {
   const keyboard = UIManager.languageMenuKeyboard();
   await ctx.editMessageText(
     '🌍 <b>إدارة اللغات</b>\n\n' +
-    '🇸🇦 <b>العربية</b> - العربية الفصحى (افتراضي)\n' +
-    '🇬🇧 <b>English</b> - الإنجليزية\n' +
-    '🇫🇷 <b>Français</b> - الفرنسية\n\n' +
-    '📊 اختر لغتك المفضلة',
+      '🇸🇦 <b>العربية</b> - العربية الفصحى (افتراضي)\n' +
+      '🇬🇧 <b>English</b> - الإنجليزية\n' +
+      '🇫🇷 <b>Français</b> - الفرنسية\n\n' +
+      '📊 اختر لغتك المفضلة',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
@@ -812,13 +812,13 @@ bot.action(/lang:(ar|en|fr)/, async (ctx) => {
   const lang = ctx.match[1];
   const languageManager = global.languageManager;
   const result = await languageManager.setUserLanguage(ctx.from.id, lang);
-  
+
   const messages = {
-    'ar': '✅ تم تغيير اللغة إلى العربية',
-    'en': '✅ Language changed to English',
-    'fr': '✅ La langue a été changée en français'
+    ar: '✅ تم تغيير اللغة إلى العربية',
+    en: '✅ Language changed to English',
+    fr: '✅ La langue a été changée en français'
   };
-  
+
   await ctx.reply(messages[lang], { parse_mode: 'HTML' });
   ctx.answerCbQuery('✅');
 });
@@ -829,11 +829,11 @@ bot.action('new:backup', async (ctx) => {
   const keyboard = UIManager.backupMenuKeyboard();
   await ctx.editMessageText(
     '📁 <b>نظام النسخ الاحتياطية</b>\n\n' +
-    '💾 <b>النسخ التلقائية</b> - يومياً تلقائياً\n' +
-    '📋 <b>قائمة النسخ</b> - كل النسخ المحفوظة\n' +
-    '🔄 <b>استعادة</b> - عودة لنسخة قديمة\n' +
-    '🗑️ <b>حذف</b> - حذف نسخة معينة\n\n' +
-    '✅ بيانات آمنة محمية تماماً',
+      '💾 <b>النسخ التلقائية</b> - يومياً تلقائياً\n' +
+      '📋 <b>قائمة النسخ</b> - كل النسخ المحفوظة\n' +
+      '🔄 <b>استعادة</b> - عودة لنسخة قديمة\n' +
+      '🗑️ <b>حذف</b> - حذف نسخة معينة\n\n' +
+      '✅ بيانات آمنة محمية تماماً',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
@@ -850,7 +850,7 @@ bot.action('backup:list', async (ctx) => {
   const backups = await backupSystem.listBackups();
   let message = '📋 <b>قائمة النسخ الاحتياطية</b>\n\n';
   backups.forEach((b, i) => {
-    message += `${i+1}. ${b.date}\n📊 ${b.size}\n\n`;
+    message += `${i + 1}. ${b.date}\n📊 ${b.size}\n\n`;
   });
   const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'new:backup')]]);
   await ctx.reply(message, { parse_mode: 'HTML', reply_markup: keyboard });
@@ -862,10 +862,10 @@ bot.action('new:cache', async (ctx) => {
   const keyboard = UIManager.cacheSystemKeyboard();
   await ctx.editMessageText(
     '⚡ <b>نظام التخزين المؤقت</b>\n\n' +
-    '📊 <b>إحصائيات</b> - معلومات الذاكرة\n' +
-    '🧹 <b>مسح</b> - تفريغ الذاكرة\n' +
-    '⚡ <b>الأداء</b> - حالة الأداء\n\n' +
-    '⚙️ يحسّن سرعة البوت معاً',
+      '📊 <b>إحصائيات</b> - معلومات الذاكرة\n' +
+      '🧹 <b>مسح</b> - تفريغ الذاكرة\n' +
+      '⚡ <b>الأداء</b> - حالة الأداء\n\n' +
+      '⚙️ يحسّن سرعة البوت معاً',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
@@ -873,7 +873,8 @@ bot.action('new:cache', async (ctx) => {
 bot.action('cache:stats', async (ctx) => {
   const cache = global.cache;
   const stats = cache.getStats();
-  const message = `📊 <b>إحصائيات الذاكرة</b>\n\n` +
+  const message =
+    '📊 <b>إحصائيات الذاكرة</b>\n\n' +
     `💾 العناصر: ${stats.keys}\n` +
     `✅ النجاحات: ${stats.hits}\n` +
     `❌ الفشل: ${stats.misses}\n` +
@@ -895,10 +896,10 @@ bot.action('new:ratelimiter', async (ctx) => {
   const keyboard = UIManager.rateLimiterKeyboard();
   await ctx.editMessageText(
     '🛡️ <b>نظام الحماية من الإساءة</b>\n\n' +
-    '⚠️ <b>الحد من الرسائل</b> - 10 رسائل/دقيقة\n' +
-    '⚠️ <b>الحد من الأوامر</b> - 20 أمر/دقيقة\n' +
-    '⚠️ <b>الحد من الألعاب</b> - 5 ألعاب/5 دقائق\n\n' +
-    '🔒 حماية عالية ضد الإساءة والبوتات المزعجة',
+      '⚠️ <b>الحد من الرسائل</b> - 10 رسائل/دقيقة\n' +
+      '⚠️ <b>الحد من الأوامر</b> - 20 أمر/دقيقة\n' +
+      '⚠️ <b>الحد من الألعاب</b> - 5 ألعاب/5 دقائق\n\n' +
+      '🔒 حماية عالية ضد الإساءة والبوتات المزعجة',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
@@ -906,7 +907,8 @@ bot.action('new:ratelimiter', async (ctx) => {
 bot.action('ratelimit:status', async (ctx) => {
   const rateLimiter = global.rateLimiter;
   const status = rateLimiter.getUserStatus(ctx.from.id);
-  const message = `📊 <b>حالة حسابك</b>\n\n` +
+  const message =
+    '📊 <b>حالة حسابك</b>\n\n' +
     `الرسائل: ${status.messages.count}/${status.messages.limit}\n` +
     `الأوامر: ${status.commands.count}/${status.commands.limit}\n` +
     `الألعاب: ${status.games.count}/${status.games.limit}\n\n` +
@@ -916,15 +918,16 @@ bot.action('ratelimit:status', async (ctx) => {
 });
 
 bot.action('ratelimit:info', async (ctx) => {
-  const message = `❓ <b>ما هو نظام الحماية؟</b>\n\n` +
-    `🛡️ يحمي البوت من:\n` +
-    `• البوتات المزعجة\n` +
-    `• الهجمات المكثفة\n` +
-    `• الاستخدام المفرط\n\n` +
-    `⚠️ إذا تجاوزت الحد الأقصى:\n` +
-    `• حظر تلقائي 5 دقائق\n` +
-    `• شطب المحاولات الخاطئة\n\n` +
-    `✅ الاستخدام الطبيعي آمن تماماً`;
+  const message =
+    '❓ <b>ما هو نظام الحماية؟</b>\n\n' +
+    '🛡️ يحمي البوت من:\n' +
+    '• البوتات المزعجة\n' +
+    '• الهجمات المكثفة\n' +
+    '• الاستخدام المفرط\n\n' +
+    '⚠️ إذا تجاوزت الحد الأقصى:\n' +
+    '• حظر تلقائي 5 دقائق\n' +
+    '• شطب المحاولات الخاطئة\n\n' +
+    '✅ الاستخدام الطبيعي آمن تماماً';
   const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'new:ratelimiter')]]);
   await ctx.reply(message, { parse_mode: 'HTML', reply_markup: keyboard });
 });
@@ -960,7 +963,9 @@ bot.action('events_leaderboard', async (ctx) => {
   const events = await EventsSystem.getActiveEvents();
   if (!events.length) return ctx.reply('❌ لا توجد أحداث نشطة');
   const leaderboard = await EventsSystem.getEventLeaderboard(events[0]._id, 10);
-  await ctx.reply(EventsSystem.formatEventLeaderboard(events[0], leaderboard), { parse_mode: 'HTML' });
+  await ctx.reply(EventsSystem.formatEventLeaderboard(events[0], leaderboard), {
+    parse_mode: 'HTML'
+  });
 });
 
 // --- REWARDS ACTIONS ---
@@ -996,14 +1001,17 @@ bot.action(/reward:loot:(basic|silver|gold|legendary)/, async (ctx) => {
 // --- GOALS ACTIONS ---
 bot.action('add_goal', async (ctx) => {
   const keyboard = require('./ui/keyboards').goalsTemplatesKeyboard();
-  await ctx.reply('🎯 اختر قالب هدف جاهز:', { parse_mode: 'HTML', reply_markup: keyboard.reply_markup });
+  await ctx.reply('🎯 اختر قالب هدف جاهز:', {
+    parse_mode: 'HTML',
+    reply_markup: keyboard.reply_markup
+  });
 });
 
 bot.action(/goal:(khatma|adhkar|pages|prayers|games|charity)/, async (ctx) => {
   const GoalsManager = require('./features/goals');
   const templates = GoalsManager.getSuggestedGoals();
   const type = ctx.match[1];
-  const template = templates.find(t => {
+  const template = templates.find((t) => {
     if (type === 'pages') return t.type === 'quran_pages';
     return t.type === type;
   });
@@ -1050,13 +1058,16 @@ bot.action('mem:review', async (ctx) => {
 });
 
 // --- DUA ACTIONS ---
-bot.action(/dua:(morning|evening|protection|forgiveness|sustenance|sleep|food|travel)/, async (ctx) => {
-  const DuaSystem = require('./features/duaSystem');
-  const category = ctx.match[1];
-  const collection = DuaSystem.getDuaCollection(category);
-  if (!collection) return ctx.answerCbQuery('❌ غير موجود');
-  await ctx.reply(DuaSystem.formatDuaCollection(collection), { parse_mode: 'HTML' });
-});
+bot.action(
+  /dua:(morning|evening|protection|forgiveness|sustenance|sleep|food|travel)/,
+  async (ctx) => {
+    const DuaSystem = require('./features/duaSystem');
+    const category = ctx.match[1];
+    const collection = DuaSystem.getDuaCollection(category);
+    if (!collection) return ctx.answerCbQuery('❌ غير موجود');
+    await ctx.reply(DuaSystem.formatDuaCollection(collection), { parse_mode: 'HTML' });
+  }
+);
 
 // --- LIBRARY ACTIONS ---
 bot.action('library:tafsir', async (ctx) => {
@@ -1161,14 +1172,20 @@ bot.action(/admin:ban:(\d+)/, async (ctx) => {
       return ctx.answerCbQuery('❌ لم يتم العثور على المستخدم');
     }
 
-    userToBan.banned = true;
+    userToBan.isBanned = true;
     userToBan.bannedAt = new Date();
-    userToBan.bannedReason = 'تم الحظر من قبل الإدارة';
+    userToBan.banReason = 'تم الحظر من قبل الإدارة';
     await userToBan.save();
 
     await ctx.answerCbQuery('✅ تم حظر المستخدم بنجاح');
-    await ctx.editMessageText(`✅ <b>تم حظر المستخدم</b>\n\n👤 ${userToBan.firstName}\n🆔 ${userId}`, 
-      { parse_mode: 'HTML', reply_markup: Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'settings:users')]]).reply_markup });
+    await ctx.editMessageText(
+      `✅ <b>تم حظر المستخدم</b>\n\n👤 ${userToBan.firstName}\n🆔 ${userId}`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'settings:users')]])
+          .reply_markup
+      }
+    );
   } catch (error) {
     console.error('Ban error:', error);
     ctx.answerCbQuery('❌ حدث خطأ');
@@ -1185,14 +1202,20 @@ bot.action(/admin:unban:(\d+)/, async (ctx) => {
       return ctx.answerCbQuery('❌ لم يتم العثور على المستخدم');
     }
 
-    userToUnban.banned = false;
+    userToUnban.isBanned = false;
     userToUnban.bannedAt = null;
-    userToUnban.bannedReason = null;
+    userToUnban.banReason = null;
     await userToUnban.save();
 
     await ctx.answerCbQuery('✅ تم السماح للمستخدم بنجاح');
-    await ctx.editMessageText(`✅ <b>تم السماح للمستخدم</b>\n\n👤 ${userToUnban.firstName}\n🆔 ${userId}`, 
-      { parse_mode: 'HTML', reply_markup: Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'settings:users')]]).reply_markup });
+    await ctx.editMessageText(
+      `✅ <b>تم السماح للمستخدم</b>\n\n👤 ${userToUnban.firstName}\n🆔 ${userId}`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'settings:users')]])
+          .reply_markup
+      }
+    );
   } catch (error) {
     console.error('Unban error:', error);
     ctx.answerCbQuery('❌ حدث خطأ');
@@ -1271,7 +1294,9 @@ bot.action('eco:transfer', async (ctx) => {
     ctx.session = ctx.session || {};
     ctx.session.ecoAwait = { type: 'transfer' };
     await ctx.answerCbQuery('✅ جاهز');
-    await ctx.reply('💸 أدخل معرّف المستخدم الذي تريد التحويل له:\n\n(مثال: @username أو معرّفه الرقمي)');
+    await ctx.reply(
+      '💸 أدخل معرّف المستخدم الذي تريد التحويل له:\n\n(مثال: @username أو معرّفه الرقمي)'
+    );
   } catch (error) {
     console.error('Transfer error:', error);
     ctx.answerCbQuery('❌ خطأ');
@@ -1287,10 +1312,13 @@ bot.action('eco:auction', async (ctx) => {
       '🎖️ وسام شرف - 750 عملة',
       '✨ أضاءة سحرية - 600 عملة'
     ];
-    
+
     const message = `🎪 <b>سوق المزاد</b>\n\n${items.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}\n\n💰 اختر عنصراً للمزايدة عليه`;
-    
-    await ctx.editMessageText(message, { parse_mode: 'HTML', reply_markup: Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'menu:economy')]]) });
+
+    await ctx.editMessageText(message, {
+      parse_mode: 'HTML',
+      reply_markup: Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'menu:economy')]])
+    });
     ctx.answerCbQuery('✅');
   } catch (error) {
     console.error('Auction error:', error);
@@ -1319,17 +1347,17 @@ bot.action('profile:gifts', (ctx) => ProfileHandler.handleGifts(ctx));
 // --- LEADERBOARD FILTERS ---
 bot.action('leaderboard:xp', async (ctx) => {
   try {
-    const users = await User.find().sort({ xp: -1 }).limit(10);
-    const user = await User.findOne({ userId: ctx.from.id });
-    const allUsers = await User.find().sort({ xp: -1 });
-    const userRank = allUsers.findIndex(u => u.userId === user.userId) + 1;
+    const users = await user.find().sort({ xp: -1 }).limit(10);
+    const user = await user.findOne({ userId: ctx.from.id });
+    const allUsers = await user.find().sort({ xp: -1 });
+    const userRank = allUsers.findIndex((u) => u.userId === user.userId) + 1;
 
     let board = `🏆 **أعلى 10 في النقاط**
 
 🎯 ترتيبك: ${userRank}/${allUsers.length}\n\n`;
-    
+
     users.forEach((u, i) => {
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
       const userMark = u.userId === user.userId ? ' 👈' : '';
       board += `${medal} ${u.firstName || 'مستخدم'} - ⭐${u.xp.toLocaleString()}${userMark}\n`;
     });
@@ -1349,17 +1377,17 @@ bot.action('leaderboard:xp', async (ctx) => {
 
 bot.action('leaderboard:coins', async (ctx) => {
   try {
-    const users = await User.find().sort({ coins: -1 }).limit(10);
-    const user = await User.findOne({ userId: ctx.from.id });
-    const allUsers = await User.find().sort({ coins: -1 });
-    const userRank = allUsers.findIndex(u => u.userId === user.userId) + 1;
+    const users = await user.find().sort({ coins: -1 }).limit(10);
+    const user = await user.findOne({ userId: ctx.from.id });
+    const allUsers = await user.find().sort({ coins: -1 });
+    const userRank = allUsers.findIndex((u) => u.userId === user.userId) + 1;
 
     let board = `💰 **أغنى 10 مستخدمين**
 
 🎯 ترتيبك: ${userRank}/${allUsers.length}\n\n`;
-    
+
     users.forEach((u, i) => {
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
       const userMark = u.userId === user.userId ? ' 👈' : '';
       board += `${medal} ${u.firstName || 'مستخدم'} - 💵${u.coins.toLocaleString()}${userMark}\n`;
     });
@@ -1379,17 +1407,17 @@ bot.action('leaderboard:coins', async (ctx) => {
 
 bot.action('leaderboard:level', async (ctx) => {
   try {
-    const users = await User.find().sort({ level: -1, xp: -1 }).limit(10);
-    const user = await User.findOne({ userId: ctx.from.id });
-    const allUsers = await User.find().sort({ level: -1, xp: -1 });
-    const userRank = allUsers.findIndex(u => u.userId === user.userId) + 1;
+    const users = await user.find().sort({ level: -1, xp: -1 }).limit(10);
+    const user = await user.findOne({ userId: ctx.from.id });
+    const allUsers = await user.find().sort({ level: -1, xp: -1 });
+    const userRank = allUsers.findIndex((u) => u.userId === user.userId) + 1;
 
     let board = `🎖️ **أعلى 10 في المستويات**
 
 🎯 ترتيبك: ${userRank}/${allUsers.length}\n\n`;
-    
+
     users.forEach((u, i) => {
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
       const userMark = u.userId === user.userId ? ' 👈' : '';
       board += `${medal} ${u.firstName || 'مستخدم'} - 🎖️${u.level} (⭐${u.xp.toLocaleString()})${userMark}\n`;
     });
@@ -1410,17 +1438,20 @@ bot.action('leaderboard:level', async (ctx) => {
 // --- SMART STATS & REWARDS HANDLERS ---
 bot.action('stats:view', async (ctx) => {
   try {
-    const user = await User.findOne({ userId: ctx.from.id });
+    const user = await user.findOne({ userId: ctx.from.id });
     if (!user) {
       return ctx.answerCbQuery('❌ لم يتم العثور على ملفك');
     }
 
     const statsMessage = Formatter.formatSmartStats(user);
-    await ctx.editMessageText(statsMessage, Markup.inlineKeyboard([
-      [Markup.button.callback('🎯 المهام اليومية', 'quests:daily')],
-      [Markup.button.callback('🏅 الإنجازات', 'achievements:view')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]));
+    await ctx.editMessageText(
+      statsMessage,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('🎯 المهام اليومية', 'quests:daily')],
+        [Markup.button.callback('🏅 الإنجازات', 'achievements:view')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ])
+    );
   } catch (error) {
     ctx.answerCbQuery('❌ خطأ في التحديث');
   }
@@ -1431,7 +1462,7 @@ bot.action('achievements:view', async (ctx) => {
   try {
     const achievements = await SmartNotifications.checkAchievements(ctx.from.id);
     let message = '🏆 <b>إنجازاتك</b>\n\n';
-    
+
     if (achievements.length > 0) {
       message += '<b>إنجازات جديدة! 🎉</b>\n';
       const formatted = SmartNotifications.formatAchievements(achievements);
@@ -1444,9 +1475,7 @@ bot.action('achievements:view', async (ctx) => {
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [[
-          { text: '⬅️ رجوع', callback_data: 'stats:view' }
-        ]]
+        inline_keyboard: [[{ text: '⬅️ رجوع', callback_data: 'stats:view' }]]
       }
     });
   } catch (error) {
@@ -1458,7 +1487,7 @@ bot.action('notification:check', async (ctx) => {
   try {
     const notification = await SmartNotifications.getSmartNotification(ctx.from.id, ctx);
     let message = '📢 <b>إشعاراتك الذكية</b>\n\n';
-    
+
     if (notification) {
       message += SmartNotifications.formatNotification(notification);
     } else {
@@ -1468,9 +1497,7 @@ bot.action('notification:check', async (ctx) => {
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [[
-          { text: '⬅️ رجوع', callback_data: 'menu:main' }
-        ]]
+        inline_keyboard: [[{ text: '⬅️ رجوع', callback_data: 'menu:main' }]]
       }
     });
   } catch (error) {
@@ -1482,7 +1509,7 @@ bot.action('behavior:analyze', async (ctx) => {
   try {
     const behavior = await LearningSystem.analyzeUserBehavior(ctx.from.id);
     let message = '🧠 <b>تحليل سلوكك</b>\n\n';
-    
+
     message += `<b>تفضيلاتك:</b>\n${behavior.preferences.join(', ')}\n\n`;
     message += `<b>النشاط:</b> ${behavior.activityLevel}\n`;
     message += `<b>المشاركة:</b> ${behavior.engagement}%\n\n`;
@@ -1492,9 +1519,7 @@ bot.action('behavior:analyze', async (ctx) => {
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [[
-          { text: '⬅️ رجوع', callback_data: 'menu:main' }
-        ]]
+        inline_keyboard: [[{ text: '⬅️ رجوع', callback_data: 'menu:main' }]]
       }
     });
   } catch (error) {
@@ -1505,17 +1530,20 @@ bot.action('behavior:analyze', async (ctx) => {
 // --- SMART STATS & REWARDS HANDLERS ---
 bot.action('stats:view', async (ctx) => {
   try {
-    const user = await User.findOne({ userId: ctx.from.id });
+    const user = await user.findOne({ userId: ctx.from.id });
     if (!user) {
       return ctx.answerCbQuery('❌ لم يتم العثور على ملفك');
     }
 
     const statsMessage = Formatter.formatSmartStats(user);
-    await ctx.editMessageText(statsMessage, Markup.inlineKeyboard([
-      [Markup.button.callback('🎯 المهام اليومية', 'quests:daily')],
-      [Markup.button.callback('🏅 الإنجازات', 'achievements:view')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]));
+    await ctx.editMessageText(
+      statsMessage,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('🎯 المهام اليومية', 'quests:daily')],
+        [Markup.button.callback('🏅 الإنجازات', 'achievements:view')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ])
+    );
   } catch (error) {
     ctx.answerCbQuery('❌ خطأ في التحديث');
   }
@@ -1523,7 +1551,7 @@ bot.action('stats:view', async (ctx) => {
 
 bot.action('rewards:daily', async (ctx) => {
   try {
-    const user = await User.findOne({ userId: ctx.from.id });
+    const user = await user.findOne({ userId: ctx.from.id });
     if (!user) return ctx.answerCbQuery('❌ خطأ');
 
     const lastDaily = new Date(user.lastDailyReward);
@@ -1536,16 +1564,17 @@ bot.action('rewards:daily', async (ctx) => {
       user.xp += 10;
       user.lastDailyReward = new Date();
       await user.save();
-      
-      await ctx.editMessageText(`🎁 **مكافأتك اليومية**
+
+      await ctx.editMessageText(
+        `🎁 **مكافأتك اليومية**
 
 ✅ حصلت على:
 • 💰 ${reward} عملة
 • ⭐ 10 نقاط
 
-العودة غداً لأخذ المكافأة التالية!`, Markup.inlineKeyboard([
-        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-      ]));
+العودة غداً لأخذ المكافأة التالية!`,
+        Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'menu:main')]])
+      );
     } else {
       const hoursLeft = Math.ceil(24 - hoursDiff);
       await ctx.answerCbQuery(`⏰ العودة في ${hoursLeft} ساعة`);
@@ -1557,13 +1586,16 @@ bot.action('rewards:daily', async (ctx) => {
 
 bot.action('achievements:view', async (ctx) => {
   try {
-    const user = await User.findOne({ userId: ctx.from.id });
+    const user = await user.findOne({ userId: ctx.from.id });
     const achievementsMsg = Formatter.formatAchievements(user);
-    
-    await ctx.editMessageText(achievementsMsg, Markup.inlineKeyboard([
-      [Markup.button.callback('📊 الإحصائيات', 'stats:view')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]));
+
+    await ctx.editMessageText(
+      achievementsMsg,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('📊 الإحصائيات', 'stats:view')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ])
+    );
   } catch (error) {
     ctx.answerCbQuery('❌ خطأ');
   }
@@ -1571,14 +1603,17 @@ bot.action('achievements:view', async (ctx) => {
 
 bot.action('quests:daily', async (ctx) => {
   try {
-    const user = await User.findOne({ userId: ctx.from.id });
+    const user = await user.findOne({ userId: ctx.from.id });
     const questsMsg = Formatter.formatDailyQuests(user);
-    
-    await ctx.editMessageText(questsMsg, Markup.inlineKeyboard([
-      [Markup.button.callback('🎮 الألعاب', 'menu:games')],
-      [Markup.button.callback('📖 الختمة', 'menu:khatma')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]));
+
+    await ctx.editMessageText(
+      questsMsg,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('🎮 الألعاب', 'menu:games')],
+        [Markup.button.callback('📖 الختمة', 'menu:khatma')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ])
+    );
   } catch (error) {
     ctx.answerCbQuery('❌ خطأ');
   }
@@ -1586,7 +1621,7 @@ bot.action('quests:daily', async (ctx) => {
 
 // --- KHATMA ACTIONS ---
 bot.action('khatma:add5', async (ctx) => {
-  const user = await User.findOne({ userId: ctx.from.id });
+  const user = await user.findOne({ userId: ctx.from.id });
   if (user && user.khatmaProgress.currentPage < 604) {
     const pagesToAdd = Math.min(5, 604 - user.khatmaProgress.currentPage);
     user.khatmaProgress.currentPage += pagesToAdd;
@@ -1600,7 +1635,7 @@ bot.action('khatma:add5', async (ctx) => {
 });
 
 bot.action('khatma:addpage', async (ctx) => {
-  const user = await User.findOne({ userId: ctx.from.id });
+  const user = await user.findOne({ userId: ctx.from.id });
   if (user && user.khatmaProgress.currentPage < 604) {
     user.khatmaProgress.currentPage += 1;
     user.khatmaProgress.percentComplete = Math.round((user.khatmaProgress.currentPage / 604) * 100);
@@ -1613,7 +1648,7 @@ bot.action('khatma:addpage', async (ctx) => {
 });
 
 bot.action('khatma:reset', async (ctx) => {
-  const user = await User.findOne({ userId: ctx.from.id });
+  const user = await user.findOne({ userId: ctx.from.id });
   if (user && user.khatmaProgress.currentPage >= 604) {
     user.khatmaProgress.currentPage = 1;
     user.khatmaProgress.percentComplete = 0;
@@ -1634,7 +1669,9 @@ bot.action('adhkar:favorite', async (ctx) => {
 });
 
 bot.action('quran:tafsir', async (ctx) => {
-  await ctx.reply('📚 التفسير: هذه آية قرآنية كريمة تحتوي على حكم وعبر عظيمة...\n\n💡 تأمل فيها جيداً');
+  await ctx.reply(
+    '📚 التفسير: هذه آية قرآنية كريمة تحتوي على حكم وعبر عظيمة...\n\n💡 تأمل فيها جيداً'
+  );
 });
 
 bot.action('quran:save', async (ctx) => {
@@ -1714,7 +1751,7 @@ bot.on('text', async (ctx) => {
 
       if (awaiting.type === 'memorization') {
         const MemorizationSystem = require('./features/memorizationSystem');
-        const parts = message.split('|').map(p => p.trim());
+        const parts = message.split('|').map((p) => p.trim());
         if (parts.length < 4) {
           return ctx.reply('❌ صيغة غير صحيحة. مثال: 1|الفاتحة|1|7');
         }
@@ -1740,7 +1777,7 @@ bot.on('text', async (ctx) => {
 
       if (awaiting.type === 'team_create') {
         const TeamManager = require('./features/teamManager');
-        const parts = message.split('|').map(p => p.trim());
+        const parts = message.split('|').map((p) => p.trim());
         const name = parts[0];
         const description = parts[1] || '';
         if (!name) {
@@ -1784,17 +1821,18 @@ bot.on('text', async (ctx) => {
             return ctx.reply('❌ لم يتم العثور على المستخدم');
           }
 
-          const userInfo = `👤 <b>معلومات المستخدم</b>\n\n` +
+          const userInfo =
+            '👤 <b>معلومات المستخدم</b>\n\n' +
             `👤 الاسم: ${foundUser.firstName}\n` +
             `🆔 ID: ${foundUser.userId}\n` +
             `⭐ النقاط: ${foundUser.xp || 0}\n` +
             `🎖️ المستوى: ${foundUser.level || 1}\n` +
             `💰 العملات: ${foundUser.coins || 0}\n` +
-            `📅 تاريخ الانضمام: ${new Date(foundUser.joinedAt).toLocaleDateString('ar')}`;
+            `📅 تاريخ الانضمام: ${new Date(foundUser.joinDate).toLocaleDateString('ar')}`;
 
           const buttons = Markup.inlineKeyboard([
-            [Markup.button.callback('🚫 حظر', 'admin:ban:' + foundUser.userId)],
-            [Markup.button.callback('✅ السماح', 'admin:unban:' + foundUser.userId)],
+            [Markup.button.callback('🚫 حظر', `admin:ban:${  foundUser.userId}`)],
+            [Markup.button.callback('✅ السماح', `admin:unban:${  foundUser.userId}`)],
             [Markup.button.callback('⬅️ رجوع', 'settings:users')]
           ]);
 
@@ -1814,18 +1852,21 @@ bot.on('text', async (ctx) => {
 
           await ctx.reply(`📊 جاري الإرسال لـ ${allUsers.length} مستخدم...`);
 
-          const sendPromises = allUsers.map(user => {
-            return ctx.telegram.sendMessage(user.userId, 
-              `📢 <b>رسالة من الإدارة</b>\n\n${message}`, 
-              { parse_mode: 'HTML' }
-            ).then(() => sent++)
-            .catch(() => failed++);
+          const sendPromises = allUsers.map((user) => {
+            return ctx.telegram
+              .sendMessage(user.userId, `📢 <b>رسالة من الإدارة</b>\n\n${message}`, {
+                parse_mode: 'HTML'
+              })
+              .then(() => sent++)
+              .catch(() => failed++);
           });
 
           await Promise.all(sendPromises);
           ctx.session.adminAwait = null;
 
-          return ctx.reply(`✅ <b>تم الإرسال</b>\n\n✅ نجح: ${sent}\n❌ فشل: ${failed}`, { parse_mode: 'HTML' });
+          return ctx.reply(`✅ <b>تم الإرسال</b>\n\n✅ نجح: ${sent}\n❌ فشل: ${failed}`, {
+            parse_mode: 'HTML'
+          });
         }
 
         if (awaiting.type === 'transfer') {
@@ -1839,7 +1880,7 @@ bot.on('text', async (ctx) => {
           } else if (targetId.startsWith('@')) {
             // Search by @username
             const usernameToFind = targetId.substring(1).toLowerCase();
-            targetUser = await User.findOne({ 
+            targetUser = await User.findOne({
               $or: [
                 { username: new RegExp(usernameToFind, 'i') },
                 { firstName: new RegExp(usernameToFind, 'i') }
@@ -1847,7 +1888,7 @@ bot.on('text', async (ctx) => {
             });
           } else {
             // Search by firstName or username
-            targetUser = await User.findOne({ 
+            targetUser = await User.findOne({
               $or: [
                 { firstName: new RegExp(targetId, 'i') },
                 { username: new RegExp(targetId, 'i') }
@@ -1861,14 +1902,17 @@ bot.on('text', async (ctx) => {
             return ctx.reply('❌ لم يتم العثور على المستخدم. حاول استخدام معرفك الرقمي أو اسمك');
           }
 
-          ctx.session.ecoAwait = { 
-            type: 'transferAmount', 
-            targetId: targetUser.userId, 
-            targetName: targetUser.firstName || targetUser.username || `المستخدم ${targetUser.userId}`
+          ctx.session.ecoAwait = {
+            type: 'transferAmount',
+            targetId: targetUser.userId,
+            targetName:
+              targetUser.firstName || targetUser.username || `المستخدم ${targetUser.userId}`
           };
-          
+
           const senderCoins = (await User.findOne({ userId: ctx.from.id })).coins || 0;
-          return ctx.reply(`💸 كم عملة تريد التحويل لـ ${targetUser.firstName || targetUser.username}?\n\n(رصيدك: ${senderCoins} عملة)`);
+          return ctx.reply(
+            `💸 كم عملة تريد التحويل لـ ${targetUser.firstName || targetUser.username}?\n\n(رصيدك: ${senderCoins} عملة)`
+          );
         }
 
         if (awaiting.type === 'transferAmount') {
@@ -1899,7 +1943,7 @@ bot.on('text', async (ctx) => {
           // Perform transfer
           sender.coins = (sender.coins || 0) - amount;
           receiver.coins = (receiver.coins || 0) + amount;
-          
+
           // Update transfer counts
           sender.transfersCount = (sender.transfersCount || 0) + 1;
           receiver.receivedTransfers = (receiver.receivedTransfers || 0) + 1;
@@ -1920,22 +1964,22 @@ bot.on('text', async (ctx) => {
           });
 
           ctx.session.ecoAwait = null;
-          
+
           // Notify sender
           await ctx.reply(
-            `✅ <b>تم التحويل بنجاح!</b>\n\n` +
-            `💸 حولت ${amount} عملة لـ ${awaiting.targetName}\n` +
-            `💰 رصيدك الجديد: ${sender.coins} عملة`,
+            '✅ <b>تم التحويل بنجاح!</b>\n\n' +
+              `💸 حولت ${amount} عملة لـ ${awaiting.targetName}\n` +
+              `💰 رصيدك الجديد: ${sender.coins} عملة`,
             { parse_mode: 'HTML' }
           );
-          
+
           // Try to notify receiver
           try {
             await ctx.telegram.sendMessage(
               receiver.userId,
-              `✅ <b>تلقيت تحويل!</b>\n\n` +
-              `💸 استقبلت ${amount} عملة من ${sender.firstName || 'مستخدم'}\n` +
-              `💰 رصيدك الجديد: ${receiver.coins} عملة`,
+              '✅ <b>تلقيت تحويل!</b>\n\n' +
+                `💸 استقبلت ${amount} عملة من ${sender.firstName || 'مستخدم'}\n` +
+                `💰 رصيدك الجديد: ${receiver.coins} عملة`,
               { parse_mode: 'HTML' }
             );
           } catch (notifyError) {
@@ -1975,8 +2019,9 @@ bot.on('text', async (ctx) => {
 
           for (const user of allUsers) {
             try {
-              await ctx.telegram.sendMessage(user.userId, 
-                `📢 <b>رسالة من المالك</b>\n\n${message}`, 
+              await ctx.telegram.sendMessage(
+                user.userId,
+                `📢 <b>رسالة من المالك</b>\n\n${message}`,
                 { parse_mode: 'HTML' }
               );
               sent++;
@@ -1984,14 +2029,13 @@ bot.on('text', async (ctx) => {
               failed++;
             }
             // Small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 100));
           }
 
           ctx.session.ownerAwait = null;
-          return ctx.reply(
-            `✅ <b>تم الإرسال</b>\n\n✅ نجح: ${sent}\n❌ فشل: ${failed}`, 
-            { parse_mode: 'HTML' }
-          );
+          return ctx.reply(`✅ <b>تم الإرسال</b>\n\n✅ نجح: ${sent}\n❌ فشل: ${failed}`, {
+            parse_mode: 'HTML'
+          });
         }
 
         if (awaiting.type === 'givecoins') {
@@ -2022,13 +2066,14 @@ bot.on('text', async (ctx) => {
           await targetUser.save();
 
           ctx.session.ownerAwait = null;
-          
+
           // Notify the user
           try {
-            await ctx.telegram.sendMessage(userId, 
-              `🎁 <b>مكافأة من المالك!</b>\n\n` +
-              `تلقيت ${amount} عملة من مالك البوت!\n` +
-              `رصيدك الجديد: ${targetUser.coins} عملة`, 
+            await ctx.telegram.sendMessage(
+              userId,
+              '🎁 <b>مكافأة من المالك!</b>\n\n' +
+                `تلقيت ${amount} عملة من مالك البوت!\n` +
+                `رصيدك الجديد: ${targetUser.coins} عملة`,
               { parse_mode: 'HTML' }
             );
           } catch (e) {
@@ -2036,10 +2081,10 @@ bot.on('text', async (ctx) => {
           }
 
           return ctx.reply(
-            `✅ <b>تم بنجاح</b>\n\n` +
-            `المستخدم: ${targetUser.firstName}\n` +
-            `المبلغ: ${amount} عملة\n` +
-            `الرصيد الجديد: ${targetUser.coins} عملة`,
+            '✅ <b>تم بنجاح</b>\n\n' +
+              `المستخدم: ${targetUser.firstName}\n` +
+              `المبلغ: ${amount} عملة\n` +
+              `الرصيد الجديد: ${targetUser.coins} عملة`,
             { parse_mode: 'HTML' }
           );
         }
@@ -2068,10 +2113,11 @@ bot.on('text', async (ctx) => {
 
             // Notify user
             try {
-              await ctx.telegram.sendMessage(user.userId, 
-                `🎁 <b>مكافأة جماعية!</b>\n\n` +
-                `تلقيت ${amount} عملة من مالك البوت!\n` +
-                `رصيدك الجديد: ${user.coins} عملة`, 
+              await ctx.telegram.sendMessage(
+                user.userId,
+                '🎁 <b>مكافأة جماعية!</b>\n\n' +
+                  `تلقيت ${amount} عملة من مالك البوت!\n` +
+                  `رصيدك الجديد: ${user.coins} عملة`,
                 { parse_mode: 'HTML' }
               );
             } catch (e) {
@@ -2079,15 +2125,15 @@ bot.on('text', async (ctx) => {
             }
 
             // Small delay
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 100));
           }
 
           ctx.session.ownerAwait = null;
           return ctx.reply(
-            `✅ <b>تم التوزيع</b>\n\n` +
-            `عدد المستخدمين: ${updated}\n` +
-            `المبلغ لكل مستخدم: ${amount} عملة\n` +
-            `المجموع الكلي: ${updated * amount} عملة`,
+            '✅ <b>تم التوزيع</b>\n\n' +
+              `عدد المستخدمين: ${updated}\n` +
+              `المبلغ لكل مستخدم: ${amount} عملة\n` +
+              `المجموع الكلي: ${updated * amount} عملة`,
             { parse_mode: 'HTML' }
           );
         }
@@ -2233,25 +2279,27 @@ const reconnectManager = new ReconnectManager({
   maxRetries: 50,
   initialDelay: 3000,
   maxDelay: 300000,
-  backoffMultiplier: 1.5,
+  backoffMultiplier: 1.5
 });
 
-let botStart = async () => {
+const botStart = async () => {
   return new Promise((resolve, reject) => {
     try {
       logger.info('🤖 جاري بدء بوت Telegram...');
-      
+
       // Delete any existing webhook to prevent conflicts
-      bot.telegram.deleteWebhook({ drop_pending_updates: true })
+      bot.telegram
+        .deleteWebhook({ drop_pending_updates: true })
         .then(() => {
           logger.info('✅ تم التحقق من حذف الـ Webhook');
         })
         .catch((webhookError) => {
           logger.warn('⚠️ خطأ في حذف الـ Webhook:', webhookError.message);
         });
-      
+
       // Launch bot
-      bot.launch()
+      bot
+        .launch()
         .then(() => {
           reconnectManager.isConnected = true;
           logger.info('✅ تم تشغيل البوت بنجاح!');
@@ -2262,7 +2310,7 @@ let botStart = async () => {
         .catch((error) => {
           logger.error('❌ فشل في بدء البوت:', error.message);
           reconnectManager.isConnected = false;
-          
+
           // Handle 409 Conflict error (another bot instance running)
           if (error.response && error.response.error_code === 409) {
             logger.warn('⚠️ خطأ 409: يوجد نسخة أخرى من البوت جاري التوقف...');
@@ -2284,12 +2332,12 @@ let botStart = async () => {
 async function startBot() {
   try {
     // Give any previous instance time to fully shutdown (Railway cold start delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
     // Connect to database
     logger.info('📦 جاري الاتصال بـ MongoDB...');
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/arab-bot';
-    
+
     // محاولة الاتصال بـ MongoDB مع إعادة محاولة
     await reconnectManager.connect(async () => {
       await Database.connect(mongoUri);
@@ -2298,31 +2346,31 @@ async function startBot() {
 
     // Start bot with intelligent retry logic
     logger.info('🚀 جاري بدء البوت...');
-    
+
     let botStarted = false;
     let retryCount = 0;
     const maxRetries = 5;
     const retryDelays = [3000, 5000, 7000, 10000, 15000]; // Increasing delays
-    
+
     while (retryCount < maxRetries && !botStarted) {
       try {
         // Wait before trying to start (gives previous instance time to shutdown)
         if (retryCount > 0) {
           const delayMs = retryDelays[retryCount - 1];
           logger.info(`⏳ محاولة #${retryCount + 1}/${maxRetries} بعد ${delayMs / 1000} ثانية...`);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
-        
+
         await botStart();
         botStarted = true;
         logger.info('✅ البوت جاهز!');
       } catch (error) {
         retryCount++;
-        
+
         // Check if it's a 409 error (another instance running)
         if (error.response && error.response.error_code === 409) {
           logger.warn(`⚠️ محاولة #${retryCount}/${maxRetries} - خطأ 409 (نسخة أخرى تعمل)`);
-          
+
           if (retryCount >= maxRetries) {
             logger.error('❌ تم تجاوز عدد المحاولات. سيتم الإيقاف للسماح للسحابة بإعادة التشغيل.');
             process.exit(1);
@@ -2374,65 +2422,70 @@ async function startBot() {
     healthMonitor.startPeriodicCheck(60000); // فحص كل دقيقة
 
     logger.info('✅ البوت يعمل الآن!');
-    logger.info(`🎯 البوت مستعد و ينتظر الرسائل...`);
+    logger.info('🎯 البوت مستعد و ينتظر الرسائل...');
 
     // Initialize New Systems
     logger.info('📲 جاري تفعيل الأنظمة الجديدة...');
-    
+
     try {
       // Initialize Notification System
       const NotificationSystem = require('./features/notificationSystem');
       const notificationSystem = new NotificationSystem(bot);
       notificationSystem.initialize();
       logger.info('✅ نظام الإشعارات الذكية جاهز');
-      
+
       // Initialize Backup System
       const BackupSystem = require('./utils/backupSystem');
       const backupSystem = new BackupSystem();
       backupSystem.scheduleAutomaticBackups();
       logger.info('✅ نظام النسخ الاحتياطية جاهز');
-      
+
       // Initialize Cache Manager
       const CacheManager = require('./utils/cacheManager');
       global.cache = new CacheManager(600);
       logger.info('✅ نظام التخزين المؤقت جاهز');
-      
+
       // Initialize Rate Limiter
       const RateLimiter = require('./utils/rateLimiter');
       global.rateLimiter = new RateLimiter();
       logger.info('✅ نظام الحماية من الإساءة جاهز');
-      
+
       // Initialize Language Manager
       const LanguageManager = require('./utils/languageManager');
       global.languageManager = new LanguageManager();
       logger.info('✅ نظام اللغات المتعددة جاهز');
-      
+
       logger.info('✅ جميع الأنظمة الجديدة جاهزة!');
     } catch (error) {
       logger.error('⚠️ خطأ في تفعيل بعض الأنظمة:', error.message);
     }
 
-      // Start Khatma scheduler (sends notifications to opted-in users)
-      let khatmaScheduler = null;
-      try {
-        const KhatmaScheduler = require('./utils/khatmaScheduler');
-        khatmaScheduler = new KhatmaScheduler({ intervalMs: 1000 * 60 * 15 }, bot);
-        khatmaScheduler.start();
-        logger.info('🔔 KhatmaScheduler started — notifying opted-in users');
-      } catch (err) {
-        logger.error('❌ Failed to start KhatmaScheduler:', err.message);
-      }
+    // Start Khatma scheduler (sends notifications to opted-in users)
+
+    let khatmaScheduler = null;
+
+    try {
+      const KhatmaScheduler = require('./utils/khatmaScheduler');
+
+      khatmaScheduler = new KhatmaScheduler({ intervalMs: 1000 * 60 * 15 }, bot);
+
+      khatmaScheduler.start();
+
+      logger.info('🔔 KhatmaScheduler started — notifying opted-in users');
+    } catch (err) {
+      logger.error('❌ Failed to start KhatmaScheduler:', err.message);
+    }
 
     // Graceful shutdown with timeout
     const gracefulShutdown = (signal) => {
       logger.info(`🛑 جاري إيقاف البوت... (${signal})`);
-      
+
       // Set a timeout to force exit if shutdown takes too long
       const shutdownTimeout = setTimeout(() => {
         logger.error('⏱️ انتهت مهلة الإيقاف، إيقاف قسري...');
         process.exit(1);
       }, 10000); // 10 second timeout
-      
+
       // Stop all services
       try {
         if (khatmaScheduler) {
@@ -2454,7 +2507,7 @@ async function startBot() {
       } catch (error) {
         logger.error('خطأ أثناء إيقاف الخدمات:', error.message);
       }
-      
+
       // Stop bot
       try {
         bot.stop(signal);
@@ -2470,7 +2523,7 @@ async function startBot() {
 
     // Setup graceful shutdown handlers
     let isShuttingDown = false;
-    
+
     process.once('SIGINT', () => {
       if (!isShuttingDown) {
         isShuttingDown = true;
@@ -2506,7 +2559,6 @@ async function startBot() {
         }
       }
     });
-
   } catch (error) {
     logger.error('❌ فشل في بدء البوت:', error.message);
     logger.info('⏳ سيحاول البوت الاتصال مجدداً خلال 10 ثواني...');
