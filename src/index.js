@@ -2172,6 +2172,15 @@ const reconnectManager = new ReconnectManager({
 let botStart = async () => {
   try {
     logger.info('🤖 جاري بدء بوت Telegram...');
+    
+    // Delete any existing webhook to prevent conflicts
+    try {
+      await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+      logger.info('✅ تم التحقق من حذف الـ Webhook');
+    } catch (webhookError) {
+      logger.warn('⚠️ خطأ في حذف الـ Webhook:', webhookError.message);
+    }
+    
     // Launch bot (non-blocking, returns immediately)
     bot.launch().then(() => {
       reconnectManager.isConnected = true;
@@ -2181,6 +2190,13 @@ let botStart = async () => {
     }).catch((error) => {
       logger.error('❌ فشل في بدء البوت:', error.message);
       reconnectManager.isConnected = false;
+      
+      // Handle 409 Conflict error
+      if (error.response && error.response.error_code === 409) {
+        logger.error('💥 خطأ 409: يوجد نسخة أخرى من البوت تعمل!');
+        logger.error('📍 تأكد من إيقاف جميع النسخ الأخرى على Railway أو أي خدمة أخرى');
+        process.exit(1); // Exit to let the cloud service handle restart
+      }
     });
     
     // Give it a moment to start
