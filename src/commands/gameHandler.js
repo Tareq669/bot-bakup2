@@ -258,7 +258,7 @@ class GameHandler {
         game: 'quranic',
         type: 'guess_verse',
         correctAnswer: game.correctAnswer,
-        reward: game.points
+        reward: game.reward
       };
 
       const message = `🎯 <b>تخمين الآية</b>\n\n<b>الدليل:</b> ${game.clue}\n\n💡 أرسل اسم السورة للإجابة`;
@@ -290,7 +290,7 @@ class GameHandler {
         game: 'quranic',
         type: 'complete_verse',
         correctAnswer: game.correctAnswer,
-        reward: game.points,
+        reward: game.reward,
         surah: game.surah
       };
 
@@ -324,7 +324,7 @@ class GameHandler {
         type: 'spot_difference',
         isCorrect: game.isCorrect,
         correctVerse: game.correctVerse,
-        reward: game.points,
+        reward: game.reward,
         surah: game.surah
       };
 
@@ -355,13 +355,13 @@ class GameHandler {
   static async handleTriviaQuestion(ctx) {
     try {
       ctx.session = ctx.session || {};
-      const game = QuranicGames.qurranTrivia();
+      const game = await QuranicGames.qurranTrivia();
 
       ctx.session.gameState = {
         game: 'quranic',
         type: 'trivia',
-        correctAnswer: game.options[game.answer],
-        reward: game.points
+        correctAnswer: game.options[game.correctAnswer],
+        reward: game.reward
       };
 
       const message = `🧠 <b>معلومات قرآنية</b>\n\n<b>السؤال:</b>\n${game.question}`;
@@ -397,7 +397,7 @@ class GameHandler {
         game: 'quranic',
         type: 'surah_count',
         correctAnswer: game.correctAnswer,
-        reward: game.points,
+        reward: game.reward,
         surah: game.surah
       };
 
