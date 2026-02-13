@@ -225,6 +225,9 @@ class GameHandler {
 
   static async handleQuranicMenu(ctx) {
     try {
+      // Answer callback query immediately
+      if (ctx.callbackQuery) await ctx.answerCbQuery();
+      
       const message = QuranicGames.formatGamesList();
 
       const buttons = Markup.inlineKeyboard([
@@ -251,6 +254,9 @@ class GameHandler {
 
   static async handleGuessVerse(ctx) {
     try {
+      // Answer callback query immediately
+      if (ctx.callbackQuery) await ctx.answerCbQuery();
+      
       ctx.session = ctx.session || {};
       const game = await QuranicGames.guessTheVerse();
 
@@ -282,9 +288,12 @@ class GameHandler {
   }
 
   static async handleCompleteVerse(ctx) {
-    try {
+    try {      // Answer callback query immediately
+      if (ctx.callbackQuery) await ctx.answerCbQuery();
+            console.log('🎮 [handleCompleteVerse] Started');
       ctx.session = ctx.session || {};
       const game = await QuranicGames.completeTheVerse();
+      console.log('🎮 [handleCompleteVerse] Game data:', game);
 
       ctx.session.gameState = {
         game: 'quranic',
@@ -293,6 +302,7 @@ class GameHandler {
         reward: game.reward,
         surah: game.surah
       };
+      console.log('🎮 [handleCompleteVerse] gameState:', ctx.session.gameState);
 
       const message = `✍️ <b>أكمل الآية</b>\n\n📍 <b>السورة:</b> ${game.surah}\n\n<b>الآية:</b> <code>${game.partial}...</code>\n\n💡 أرسل باقي الآية`;
 
@@ -306,18 +316,24 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
+      console.error('❌ [handleCompleteVerse] Error:', error);
       // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس اللعبة
       if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
-        console.error('Error in handleCompleteVerse:', error);
-        ctx.reply('❌ حدث خطأ');
+        console.error('Error in handleCompleteVerse:', error.message || error);
+        await ctx.reply('❌ حدث خطأ في لعبة أكمل الآية').catch(e => console.error('Failed to send error:', e));
       }
     }
   }
 
   static async handleSpotDifference(ctx) {
     try {
+      // Answer callback query immediately
+      if (ctx.callbackQuery) await ctx.answerCbQuery();
+      
+      console.log('🔍 [handleSpotDifference] Started');
       ctx.session = ctx.session || {};
       const game = await QuranicGames.spotTheDifference();
+      console.log('🔍 [handleSpotDifference] Game data:', game);
 
       ctx.session.gameState = {
         game: 'quranic',
@@ -328,6 +344,7 @@ class GameHandler {
         reward: game.reward,
         surah: game.surah
       };
+      console.log('🔍 [handleSpotDifference] gameState:', ctx.session.gameState);
 
       const message = `🔍 <b>اكتشف الفرق</b>\n\n📍 <b>السورة:</b> ${game.surah}\n\n<b>هل الآية صحيحة؟</b>\n<code>${game.verse}</code>`;
 
@@ -345,18 +362,24 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
+      console.error('❌ [handleSpotDifference] Error:', error);
       // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس اللعبة
       if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
-        console.error('Error in handleSpotDifference:', error);
-        ctx.reply('❌ حدث خطأ');
+        console.error('Error in handleSpotDifference:', error.message || error);
+        await ctx.reply('❌ حدث خطأ في لعبة اكتشف الفرق').catch(e => console.error('Failed to send error:', e));
       }
     }
   }
 
   static async handleTriviaQuestion(ctx) {
     try {
+      // Answer callback query immediately
+      if (ctx.callbackQuery) await ctx.answerCbQuery();
+      
+      console.log('🧠 [handleTriviaQuestion] Started');
       ctx.session = ctx.session || {};
       const game = await QuranicGames.qurranTrivia();
+      console.log('🧠 [handleTriviaQuestion] Game data:', game);
 
       ctx.session.gameState = {
         game: 'quranic',
@@ -364,6 +387,7 @@ class GameHandler {
         correctAnswer: game.options[game.correctAnswer],
         reward: game.reward
       };
+      console.log('🧠 [handleTriviaQuestion] gameState:', ctx.session.gameState);
 
       const message = `🧠 <b>معلومات قرآنية</b>\n\n<b>السؤال:</b>\n${game.question}`;
 
@@ -381,18 +405,24 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
+      console.error('❌ [handleTriviaQuestion] Error:', error);
       // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس السؤال
       if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
-        console.error('Error in handleTriviaQuestion:', error);
-        ctx.reply('❌ حدث خطأ');
+        console.error('Error in handleTriviaQuestion:', error.message || error);
+        await ctx.reply('❌ حدث خطأ في لعبة معلومات قرآنية').catch(e => console.error('Failed to send error:', e));
       }
     }
   }
 
   static async handleSurahCount(ctx) {
     try {
+      // Answer callback query immediately
+      if (ctx.callbackQuery) await ctx.answerCbQuery();
+      
+      console.log('📊 [handleSurahCount] Started');
       ctx.session = ctx.session || {};
       const game = await QuranicGames.surahCount();
+      console.log('📊 [handleSurahCount] Game data:', game);
 
       ctx.session.gameState = {
         game: 'quranic',
@@ -401,6 +431,7 @@ class GameHandler {
         reward: game.reward,
         surah: game.surah
       };
+      console.log('📊 [handleSurahCount] gameState:', ctx.session.gameState);
 
       const message = `📊 <b>عد الآيات</b>\n\n<b>السؤال:</b>\n${game.question}\n\n💡 أرسل الرقم`;
 
@@ -414,28 +445,38 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
+      console.error('❌ [handleSurahCount] Error:', error);
       // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس اللعبة
       if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
-        console.error('Error in handleSurahCount:', error);
-        ctx.reply('❌ حدث خطأ');
+        console.error('Error in handleSurahCount:', error.message || error);
+        await ctx.reply('❌ حدث خطأ في لعبة عد الآيات').catch(e => console.error('Failed to send error:', e));
       }
     }
   }
 
   static async processQuranicAnswer(ctx, userAnswer) {
     try {
+      // Answer callback query if it's a button press
+      if (ctx.callbackQuery) {
+        await ctx.answerCbQuery();
+      }
+      
+      console.log('✅ [processQuranicAnswer] Started with answer:', userAnswer);
       ctx.session = ctx.session || {};
       const gameState = ctx.session.gameState;
+      console.log('✅ [processQuranicAnswer] Current gameState:', gameState);
 
       if (!gameState || gameState.game !== 'quranic') {
-        return ctx.answerCbQuery('❌ لا توجد لعبة جارية');
+        console.log('❌ [processQuranicAnswer] No active game');
+        return ctx.reply('❌ لا توجد لعبة جارية');
       }
 
       // التحقق من وجود البيانات المطلوبة
       if (!gameState.correctAnswer || gameState.reward === undefined) {
-        console.error('Missing gameState data:', gameState);
+        console.error('❌ [processQuranicAnswer] Missing gameState data:', gameState);
         return ctx.reply('❌ حدث خطأ في بيانات اللعبة. حاول البدء بلعبة جديدة.');
       }
+      console.log('✅ [processQuranicAnswer] Validation passed');
 
       const isCorrect = userAnswer.trim().toLowerCase() === gameState.correctAnswer.toString().toLowerCase();
       const reward = isCorrect ? gameState.reward : 0;
@@ -465,8 +506,13 @@ class GameHandler {
       // Clear game state
       ctx.session.gameState = null;
     } catch (error) {
-      console.error('Error processing quranic answer:', error);
-      ctx.reply('❌ حدث خطأ في معالجة الإجابة');
+      console.error('❌ [processQuranicAnswer] Error:', error);
+      console.error('❌ [processQuranicAnswer] Stack:', error.stack);
+      try {
+        await ctx.reply('❌ حدث خطأ في معالجة الإجابة');
+      } catch (replyError) {
+        console.error('❌ [processQuranicAnswer] Failed to send error message:', replyError);
+      }
     }
   }
 }
