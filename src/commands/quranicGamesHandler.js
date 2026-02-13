@@ -312,8 +312,23 @@ ${optionsText}
         return ctx.reply('❌ لا توجد لعبة نشطة');
       }
 
-      if (!gameState.answer || !gameState.reward || !gameState.type) {
+      // التحقق من البيانات حسب نوع اللعبة
+      if (!gameState.reward || !gameState.type) {
         console.error('❌ Missing gameState:', gameState);
+        ctx.session.gameState = null;
+        return ctx.reply('❌ حدث خطأ. جرب لعبة جديدة');
+      }
+
+      // للعبة الثقافية: يجب أن تكون هناك answerIndex و options
+      if (gameState.type === 'cultural_knowledge' && (gameState.answerIndex === undefined || !gameState.options)) {
+        console.error('❌ Missing cultural_knowledge data:', gameState);
+        ctx.session.gameState = null;
+        return ctx.reply('❌ حدث خطأ. جرب لعبة جديدة');
+      }
+
+      // للألعاب الأخرى: يجب أن يكون هناك answer
+      if (gameState.type !== 'cultural_knowledge' && !gameState.answer) {
+        console.error('❌ Missing answer in gameState:', gameState);
         ctx.session.gameState = null;
         return ctx.reply('❌ حدث خطأ. جرب لعبة جديدة');
       }
