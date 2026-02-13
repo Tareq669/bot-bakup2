@@ -633,31 +633,6 @@ bot.action('new:qgames', async (ctx) => {
   );
 });
 
-bot.action(/qgame:(gueverse|complete|spot|trivia|surah)/, async (ctx) => {
-  ctx.answerCbQuery('🎮 جاري البدء بالعبة...');
-  const GameManager = require('./games/quranicGames');
-
-  const gameType = ctx.match[1];
-  const games = {
-    gueverse: 'guessTheVerse',
-    complete: 'completeTheVerse',
-    spot: 'spotTheDifference',
-    trivia: 'qurranTrivia',
-    surah: 'surahCount'
-  };
-
-  const result = await GameManager[games[gameType]](ctx.from.id);
-  if (result.success) {
-    const message = result.question;
-    const keyboard = Markup.inlineKeyboard(
-      result.options.map((opt) => [Markup.button.callback(opt, `qgameans:${gameType}:${opt}`)])
-    );
-    await ctx.reply(message, { parse_mode: 'HTML', reply_markup: keyboard });
-  } else {
-    await ctx.reply(`❌ ${  result.message}`);
-  }
-});
-
 // --- NEW SHOP ACTIONS ---
 bot.action('new:shop', async (ctx) => {
   const UIManager = require('./ui/keyboards');
