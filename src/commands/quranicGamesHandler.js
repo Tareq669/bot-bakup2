@@ -265,7 +265,8 @@ ${game.question}
       ctx.session.gameState = {
         game: 'quranic',
         type: game.type,
-        answer: game.answer,
+        answerIndex: game.answerIndex,
+        options: game.options,
         reward: game.reward
       };
 
@@ -317,7 +318,31 @@ ${optionsText}
         return ctx.reply('❌ حدث خطأ. جرب لعبة جديدة');
       }
 
-      const isCorrect = QuranicGames.checkAnswer(userAnswer, gameState.answer, gameState.type);
+      // معالجة خاصة للأسئلة الثقافية
+      let isCorrect = false;
+      let correctAnswer = '';
+
+      if (gameState.type === 'cultural_knowledge') {
+        // تحويل إجابة المستخدم إلى فهرس (A→0, B→1, C→2, D→3 أو 1→0, 2→1, 3→2, 4→3)
+        let userIndex = -1;
+        const cleanAnswer = String(userAnswer).trim().toUpperCase();
+
+        // التحقق من الأحرف (A, B, C, D)
+        if (cleanAnswer.length === 1 && cleanAnswer >= 'A' && cleanAnswer <= 'D') {
+          userIndex = cleanAnswer.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
+        }
+        // التحقق من الأرقام (1, 2, 3, 4)
+        else if (cleanAnswer >= '1' && cleanAnswer <= '4') {
+          userIndex = parseInt(cleanAnswer) - 1; // 1→0, 2→1, 3→2, 4→3
+        }
+
+        isCorrect = userIndex === gameState.answerIndex;
+        correctAnswer = gameState.options[gameState.answerIndex] || gameState.answerIndex;
+      } else {
+        isCorrect = QuranicGames.checkAnswer(userAnswer, gameState.answer, gameState.type);
+        correctAnswer = gameState.answer;
+      }
+
       const reward = isCorrect ? gameState.reward : 0;
 
       await QuranicGames.recordGameResult(ctx.from.id, gameState.type, reward, isCorrect);
@@ -335,7 +360,7 @@ ${optionsText}
       } else {
         resultMessage = `❌ <b>إجابة خاطئة</b>
 
-💡 الإجابة الصحيحة: <code>${gameState.answer}</code>`;
+💡 الإجابة الصحيحة: <code>${correctAnswer}</code>`;
 
         if (gameState.type === 'spot_difference' && gameState.correctVerse) {
           resultMessage += `\n\n📖 الآية الصحيحة:\n<code>${gameState.correctVerse}</code>`;
