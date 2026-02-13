@@ -65,7 +65,7 @@ const isCorrect5 = QuranicGames.checkAnswer(countGame.answer, countGame.answer, 
 console.log('✓ التحقق من الإجابة الصحيحة:', isCorrect5 ? '✅ نعم' : '❌ لا');
 
 // Summary
-console.log('\n' + '='.repeat(50));
+console.log(`\n${  '='.repeat(50)}`);
 console.log('\n📊 ملخص الاختبارات');
 console.log('==================');
 console.log('✅ لعبة 1 - تخمين الآية:', isCorrect1 ? 'نجح ✓' : 'فشل ✗');
@@ -76,4 +76,4 @@ console.log('✅ لعبة 5 - عد الآيات:', isCorrect5 ? 'نجح ✓' : '
 
 const allPassed = isCorrect1 && isCorrect2 && isCorrect3 && isCorrect4 && isCorrect5;
 console.log('\n🎉 النتيجة النهائية:', allPassed ? '✅ جميع الألعاب تعمل!' : '❌ توجد مشاكل');
-console.log('='.repeat(50) + '\n');
+console.log(`${'='.repeat(50)  }\n`);

@@ -1249,13 +1249,13 @@ bot.hears('🛡️ حماية من الإساءة', (ctx) => MenuHandler.handleP
 
 // --- TEXT HANDLER FOR QURANIC GAMES (AFTER hears) ---
 bot.on('text', async (ctx) => {
-  // معالجة إجابات الألعاب القرآنية  
+  // معالجة إجابات الألعاب القرآنية
   if (ctx.session?.gameState && ctx.session.gameState.game === 'quranic') {
     const userAnswer = ctx.message.text;
     await QuranicGamesHandler.processAnswer(ctx, userAnswer);
     return;
   }
-  
+
   // Let other handlers process the message
 });
 
@@ -1668,7 +1668,7 @@ bot.action('quote:random', async (ctx) => {
   try {
     const ContentProvider = require('./content/contentProvider');
     const quote = await ContentProvider.getQuote();
-    
+
     const buttons = Markup.inlineKeyboard([
       [Markup.button.callback('❤️ حفظ', 'quote:save'), Markup.button.callback('📋 نسخ', 'quote:copy')],
       [Markup.button.callback('📤 شارك', 'quote:share')],
@@ -1687,7 +1687,7 @@ bot.action('quote:random', async (ctx) => {
         reply_markup: buttons.reply_markup
       });
     }
-    
+
     await ctx.answerCbQuery('✨ اقتباس جديد!');
   } catch (error) {
     console.error('Error in quote:random:', error);
@@ -1699,14 +1699,14 @@ bot.action('quote:save', async (ctx) => {
   try {
     const { User } = require('./database/models');
     const ContentProvider = require('./content/contentProvider');
-    
+
     const user = await User.findOne({ userId: ctx.from.id });
     if (!user) {
       return ctx.answerCbQuery('❌ لم يتم العثور على ملفك');
     }
 
     const quote = await ContentProvider.getQuote();
-    
+
     // Initialize saved quotes if not exists
     if (!user.savedQuotes) {
       user.savedQuotes = [];
@@ -1730,9 +1730,9 @@ bot.action('quote:share', async (ctx) => {
   try {
     const ContentProvider = require('./content/contentProvider');
     const quote = await ContentProvider.getQuote();
-    
+
     const shareMessage = `🌟 اقتباس من البوت الإسلامي الذكي 🤖\n\n${quote}\n\n� <i>شارك هذا الاقتباس مع أصدقائك!</i>`;
-    
+
     const buttons = Markup.inlineKeyboard([
       [Markup.button.callback('❤️ حفظ', 'quote:save')],
       [Markup.button.callback('اقتباس آخر', 'quote:random')],
@@ -1750,7 +1750,7 @@ bot.action('quote:share', async (ctx) => {
         reply_markup: buttons.reply_markup
       });
     }
-    
+
     await ctx.answerCbQuery('📤 تم تحضير الاقتباس - نسخ والصقه لمشاركته!');
   } catch (error) {
     console.error('Error in quote:share:', error);
@@ -1761,14 +1761,14 @@ bot.action('quote:share', async (ctx) => {
 bot.action('quote:favorites', async (ctx) => {
   try {
     const { User } = require('./database/models');
-    
+
     const user = await User.findOne({ userId: ctx.from.id });
     if (!user) {
       return ctx.answerCbQuery('❌ لم يتم العثور على ملفك');
     }
 
     if (!user.savedQuotes || user.savedQuotes.length === 0) {
-      const message = `❤️ <b>الاقتباسات المحفوظة</b>\n\nلم تحفظ أي اقتباسات بعد، ابدأ بحفظ الاقتباسات التي يعجب بها!`;
+      const message = '❤️ <b>الاقتباسات المحفوظة</b>\n\nلم تحفظ أي اقتباسات بعد، ابدأ بحفظ الاقتباسات التي يعجب بها!';
 
       const buttons = Markup.inlineKeyboard([
         [Markup.button.callback('🌟 أخذ اقتباس', 'quote:random')],
@@ -1822,18 +1822,18 @@ bot.action('quote:copy', async (ctx) => {
   try {
     const ContentProvider = require('./content/contentProvider');
     const quote = await ContentProvider.getQuote();
-    
+
     // Store quote in clipboard context
     ctx.session = ctx.session || {};
     ctx.session.lastContent = quote;
-    
+
     // Send as text that can be copied
     const message = `📋 <b>انسخ الاقتباس:</b>\n\n<code>${quote}</code>\n\n✅ يمكنك الآن نسخ النص بالضغط عليه`;
-    
+
     const buttons = Markup.inlineKeyboard([
       [Markup.button.callback('⬅️ رجوع', 'quote:random')]
     ]);
-    
+
     try {
       await ctx.editMessageText(message, {
         parse_mode: 'HTML',
@@ -1845,7 +1845,7 @@ bot.action('quote:copy', async (ctx) => {
         reply_markup: buttons.reply_markup
       });
     }
-    
+
     await ctx.answerCbQuery('📋 تم نسخ الاقتباس إلى الحافظة!');
   } catch (error) {
     console.error('Error in quote:copy:', error);
@@ -1860,7 +1860,7 @@ bot.action('poetry:random', async (ctx) => {
   try {
     const ContentProvider = require('./content/contentProvider');
     const poem = await ContentProvider.getPoetry();
-    
+
     const buttons = Markup.inlineKeyboard([
       [Markup.button.callback('❤️ حفظ', 'poetry:save'), Markup.button.callback('📋 نسخ', 'poetry:copy')],
       [Markup.button.callback('📤 شارك', 'poetry:share')],
@@ -1879,7 +1879,7 @@ bot.action('poetry:random', async (ctx) => {
         reply_markup: buttons.reply_markup
       });
     }
-    
+
     await ctx.answerCbQuery('✨ قصيدة جديدة!');
   } catch (error) {
     console.error('Error in poetry:random:', error);
@@ -1891,14 +1891,14 @@ bot.action('poetry:save', async (ctx) => {
   try {
     const { User } = require('./database/models');
     const ContentProvider = require('./content/contentProvider');
-    
+
     const user = await User.findOne({ userId: ctx.from.id });
     if (!user) {
       return ctx.answerCbQuery('❌ لم يتم العثور على ملفك');
     }
 
     const poem = await ContentProvider.getPoetry();
-    
+
     // Initialize saved poems if not exists
     if (!user.savedPoems) {
       user.savedPoems = [];
@@ -1922,9 +1922,9 @@ bot.action('poetry:share', async (ctx) => {
   try {
     const ContentProvider = require('./content/contentProvider');
     const poem = await ContentProvider.getPoetry();
-    
+
     const shareMessage = `📖 قصيدة عربية أصيلة 🎭\n\n${poem}\n\n💡 <i>شارك هذه القصيدة مع أصدقائك!</i>`;
-    
+
     const buttons = Markup.inlineKeyboard([
       [Markup.button.callback('❤️ حفظ', 'poetry:save')],
       [Markup.button.callback('قصيدة أخرى', 'poetry:random')],
@@ -1942,7 +1942,7 @@ bot.action('poetry:share', async (ctx) => {
         reply_markup: buttons.reply_markup
       });
     }
-    
+
     await ctx.answerCbQuery('📤 تم تحضير القصيدة - نسخ والصقها لمشاركتها!');
   } catch (error) {
     console.error('Error in poetry:share:', error);
@@ -1953,14 +1953,14 @@ bot.action('poetry:share', async (ctx) => {
 bot.action('poetry:favorites', async (ctx) => {
   try {
     const { User } = require('./database/models');
-    
+
     const user = await User.findOne({ userId: ctx.from.id });
     if (!user) {
       return ctx.answerCbQuery('❌ لم يتم العثور على ملفك');
     }
 
     if (!user.savedPoems || user.savedPoems.length === 0) {
-      const message = `❤️ <b>القصائد المحفوظة</b>\n\nلم تحفظ أي قصائد بعد، ابدأ بحفظ القصائد التي تعجbب بها!`;
+      const message = '❤️ <b>القصائد المحفوظة</b>\n\nلم تحفظ أي قصائد بعد، ابدأ بحفظ القصائد التي تعجbب بها!';
 
       const buttons = Markup.inlineKeyboard([
         [Markup.button.callback('🌟 قصيدة جديدة', 'poetry:random')],
@@ -2014,18 +2014,18 @@ bot.action('poetry:copy', async (ctx) => {
   try {
     const ContentProvider = require('./content/contentProvider');
     const poem = await ContentProvider.getPoetry();
-    
+
     // Store poem in clipboard context
     ctx.session = ctx.session || {};
     ctx.session.lastContent = poem;
-    
+
     // Send as text that can be copied
     const message = `📋 <b>انسخ القصيدة:</b>\n\n<code>${poem}</code>\n\n✅ يمكنك الآن نسخ النص بالضغط عليه`;
-    
+
     const buttons = Markup.inlineKeyboard([
       [Markup.button.callback('⬅️ رجوع', 'poetry:random')]
     ]);
-    
+
     try {
       await ctx.editMessageText(message, {
         parse_mode: 'HTML',
@@ -2037,7 +2037,7 @@ bot.action('poetry:copy', async (ctx) => {
         reply_markup: buttons.reply_markup
       });
     }
-    
+
     await ctx.answerCbQuery('📋 تم نسخ القصيدة إلى الحافظة!');
   } catch (error) {
     console.error('Error in poetry:copy:', error);
