@@ -275,7 +275,8 @@ class QuranicGames {
    */
   static async recordGameResult(userId, gameType, points, won) {
     try {
-      const user = await User.findById(userId);
+      // استخدام findOne بدلاً من findById لأن userId هو رقم وليس ObjectId
+      const user = await User.findOne({ userId });
       if (!user) return false;
 
       user.gameStats = user.gameStats || {};
@@ -289,7 +290,8 @@ class QuranicGames {
       if (won) {
         user.gameStats[gameType].won++;
         user.gameStats[gameType].totalPoints += points;
-        user.coins += points;
+        // التأكد من أن coins قيمة صالحة وليست NaN
+        user.coins = (user.coins || 0) + (points || 0);
       }
 
       await user.save();

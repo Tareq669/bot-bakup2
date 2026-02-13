@@ -24,8 +24,13 @@ class EconomyManager {
         user = await this.createUser(userId);
       }
 
-      user.coins += amount;
-      user.xp += Math.floor(amount / 10);
+      // التأكد من أن القيم صالحة وليست NaN
+      const currentCoins = user.coins || 0;
+      const currentXp = user.xp || 0;
+      const validAmount = Number(amount) || 0;
+      
+      user.coins = currentCoins + validAmount;
+      user.xp = currentXp + Math.floor(validAmount / 10);
       await user.save();
 
       // Create transaction record
@@ -50,11 +55,15 @@ class EconomyManager {
       const user = await User.findOne({ userId });
       if (!user) return null;
 
-      if (user.coins < amount) {
+      // التأكد من أن القيم صالحة وليست NaN
+      const currentCoins = user.coins || 0;
+      const validAmount = Number(amount) || 0;
+
+      if (currentCoins < validAmount) {
         return null; // Insufficient balance
       }
 
-      user.coins -= amount;
+      user.coins = currentCoins - validAmount;
       await user.save();
 
       // Create transaction record
@@ -80,11 +89,18 @@ class EconomyManager {
       const toUser = await User.findOne({ userId: toUserId });
 
       if (!fromUser || !toUser) return false;
-      if (fromUser.coins < amount) return false;
+      
+      // التأكد من أن القيم صالحة وليست NaN
+      const fromCoins = fromUser.coins || 0;
+      const toCoins = toUser.coins || 0;
+      const toXp = toUser.xp || 0;
+      const validAmount = Number(amount) || 0;
+      
+      if (fromCoins < validAmount) return false;
 
-      fromUser.coins -= amount;
-      toUser.coins += amount;
-      toUser.xp += Math.floor(amount / 20);
+      fromUser.coins = fromCoins - validAmount;
+      toUser.coins = toCoins + validAmount;
+      toUser.xp = toXp + Math.floor(validAmount / 20);
 
       await fromUser.save();
       await toUser.save();
@@ -155,8 +171,12 @@ class EconomyManager {
         reward += bonus;
       }
 
-      user.coins += reward;
-      user.xp += 50;
+      // التأكد من أن القيم صالحة وليست NaN
+      const currentCoins = user.coins || 0;
+      const currentXp = user.xp || 0;
+      
+      user.coins = currentCoins + reward;
+      user.xp = currentXp + 50;
       user.dailyReward.lastClaimed = now;
       user.dailyReward.streak = (user.dailyReward.streak || 0) + 1;
 
@@ -219,14 +239,17 @@ class EconomyManager {
       const user = await User.findOne({ userId });
       if (!user) return { success: false, message: '❌ المستخدم غير موجود' };
 
-      if (user.coins < item.price) {
+      // التأكد من أن القيم صالحة وليست NaN
+      const currentCoins = user.coins || 0;
+      
+      if (currentCoins < item.price) {
         return {
           success: false,
-          message: `❌ رصيدك غير كافي. تحتاج ${item.price - user.coins} عملة أخرى`
+          message: `❌ رصيدك غير كافي. تحتاج ${item.price - currentCoins} عملة أخرى`
         };
       }
 
-      user.coins -= item.price;
+      user.coins = currentCoins - item.price;
       const existingItem = user.inventory.find(i => i.itemId === String(item.id));
 
       if (existingItem) {
