@@ -54,13 +54,21 @@ const transactionSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
   type: {
     type: String,
-    enum: ['purchase', 'transfer', 'reward', 'penalty'],
+    enum: ['earn', 'spend', 'purchase', 'transfer', 'reward', 'penalty'],
     required: true
   },
   amount: { type: Number, required: true },
   description: String,
+  reason: String,
+  relatedUserId: Number,
   itemId: mongoose.Schema.Types.ObjectId,
-  timestamp: { type: Date, default: Date.now }
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'completed'
+  },
+  timestamp: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: Date.now }
 });
 
 /**
