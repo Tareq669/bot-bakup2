@@ -571,9 +571,11 @@ ${verse.translation || 'لا توجد ترجمة'}`;
 اختر من الاقتباسات:`;
 
       const buttons = Markup.inlineKeyboard([
-        [Markup.button.callback('اقتباس عشوائي', 'quote:random')],
-        [Markup.button.callback('المفضلة', 'quote:save')],
-        [Markup.button.callback('رجوع', 'menu:main')]
+        [
+          Markup.button.callback('🌟 عشوائي', 'quote:random'),
+          Markup.button.callback('❤️ المفضلة', 'quote:favorites')
+        ],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
       ]);
 
       await ctx.reply(message, {

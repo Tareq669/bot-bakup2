@@ -1630,13 +1630,159 @@ bot.action('quran:save', async (ctx) => {
   await ctx.answerCbQuery('❤️ تم حفظ الآية في المفضلة!');
 });
 
+bot.action('quote:random', async (ctx) => {
+  try {
+    const ContentProvider = require('./src/content/contentProvider');
+    const quote = await ContentProvider.getQuote();
+    
+    const buttons = Markup.inlineKeyboard([
+      [Markup.button.callback('❤️ حفظ', 'quote:save')],
+      [Markup.button.callback('📤 شارك', 'quote:share')],
+      [Markup.button.callback('اقتباس جديد', 'quote:random')],
+      [Markup.button.callback('⬅️ رجوع', 'menu:quotes')]
+    ]);
+
+    try {
+      await ctx.editMessageText(`✨ <b>اقتباس ملهم</b>\n\n${quote}`, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (e) {
+      await ctx.reply(`✨ <b>اقتباس ملهم</b>\n\n${quote}`, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    }
+    
+    await ctx.answerCbQuery('✨ اقتباس جديد!');
+  } catch (error) {
+    console.error('Error in quote:random:', error);
+    await ctx.answerCbQuery('❌ حدث خطأ في جلب الاقتباس');
+  }
+});
+
 bot.action('quote:save', async (ctx) => {
-  await ctx.answerCbQuery('❤️ تم حفظ الاقتباس في المفضلة!');
+  try {
+    const { User } = require('./src/database/models');
+    const ContentProvider = require('./src/content/contentProvider');
+    
+    const user = await User.findOne({ userId: ctx.from.id });
+    if (!user) {
+      return ctx.answerCbQuery('❌ لم يتم العثور على ملفك');
+    }
+
+    const quote = await ContentProvider.getQuote();
+    
+    // Initialize saved quotes if not exists
+    if (!user.savedQuotes) {
+      user.savedQuotes = [];
+    }
+
+    // Check if quote already saved
+    if (!user.savedQuotes.includes(quote)) {
+      user.savedQuotes.push(quote);
+      await user.save();
+      await ctx.answerCbQuery('❤️ تم حفظ الاقتباس في المفضلة!');
+    } else {
+      await ctx.answerCbQuery('ℹ️ هذا الاقتباس محفوظ بالفعل');
+    }
+  } catch (error) {
+    console.error('Error in quote:save:', error);
+    await ctx.answerCbQuery('❌ حدث خطأ في حفظ الاقتباس');
+  }
 });
 
 bot.action('quote:share', async (ctx) => {
-  await ctx.answerCbQuery('📤 شارك هذا الاقتباس مع أصدقائك!');
+  try {
+    const ContentProvider = require('./src/content/contentProvider');
+    const quote = await ContentProvider.getQuote();
+    
+    const shareMessage = `🌟 اقتباس من البوت الإسلامي الذكي🤖\n\n${quote}\n\n📱 استخدم البوت الآن: @بوت_الاقتباسات_الإسلامي`;
+    
+    const buttons = Markup.inlineKeyboard([
+      [Markup.button.switchInline('📤 شارك مع صديق', quote)]
+    ]);
+
+    try {
+      await ctx.editMessageText(shareMessage, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (e) {
+      await ctx.reply(shareMessage, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    }
+    
+    await ctx.answerCbQuery('📤 تم تحضير الاقتباس للمشاركة!');
+  } catch (error) {
+    console.error('Error in quote:share:', error);
+    await ctx.answerCbQuery('❌ حدث خطأ في مشاركة الاقتباس');
+  }
 });
+
+bot.action('quote:favorites', async (ctx) => {
+  try {
+    const { User } = require('./src/database/models');
+    
+    const user = await User.findOne({ userId: ctx.from.id });
+    if (!user) {
+      return ctx.answerCbQuery('❌ لم يتم العثور على ملفك');
+    }
+
+    if (!user.savedQuotes || user.savedQuotes.length === 0) {
+      const message = `❤️ <b>الاقتباسات المحفوظة</b>\n\nلم تحفظ أي اقتباسات بعد، ابدأ بحفظ الاقتباسات التي يعجب بها!`;
+
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🌟 أخذ اقتباس', 'quote:random')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:quotes')]
+      ]);
+
+      try {
+        await ctx.editMessageText(message, {
+          parse_mode: 'HTML',
+          reply_markup: buttons.reply_markup
+        });
+      } catch (e) {
+        await ctx.reply(message, {
+          parse_mode: 'HTML',
+          reply_markup: buttons.reply_markup
+        });
+      }
+      return ctx.answerCbQuery('لا توجد اقتباسات محفوظة');
+    }
+
+    // Display saved quotes (first 5)
+    const savedQuotes = user.savedQuotes.slice(0, 5);
+    const quotesText = savedQuotes.map((q, i) => `${i+1}. ${q}`).join('\n\n');
+    const message = `❤️ <b>الاقتباسات المحفوظة</b> (${user.savedQuotes.length})\n\n${quotesText}`;
+
+    const buttons = Markup.inlineKeyboard([
+      [Markup.button.callback('🌟 اقتباس جديد', 'quote:random')],
+      [Markup.button.callback('⬅️ رجوع', 'menu:quotes')]
+    ]);
+
+    try {
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (e) {
+      await ctx.reply(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    }
+
+    await ctx.answerCbQuery('❤️ عرض الاقتباسات المحفوظة');
+  } catch (error) {
+    console.error('Error in quote:favorites:', error);
+    await ctx.answerCbQuery('❌ حدث خطأ في عرض الاقتباسات المحفوظة');
+  }
+});
+
+bot.action('menu:quotes', (ctx) => MenuHandler.handleQuotesMenu(ctx));
 
 // --- KEYBOARD BUTTON HANDLERS ---
 bot.hears('🕌 الختمة', (ctx) => MenuHandler.handleKhatmaMenu(ctx));
