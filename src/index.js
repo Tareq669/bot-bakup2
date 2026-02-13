@@ -1204,6 +1204,9 @@ bot.action('game:challenges', (ctx) => GameHandler.handleChallenges(ctx));
 // --- QURANIC GAMES HANDLERS (نظام جديد متكامل) ---
 bot.action('game:quranic', async (ctx) => await QuranicGamesHandler.showMenu(ctx));
 
+// لعبة تخمين الآية
+bot.action('qgame:guess', async (ctx) => await QuranicGamesHandler.startGuessTheSurah(ctx));
+
 // لعبة أكمل الآية
 bot.action('qgame:complete', async (ctx) => await QuranicGamesHandler.startCompleteVerse(ctx));
 

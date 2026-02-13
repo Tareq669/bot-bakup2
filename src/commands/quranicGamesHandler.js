@@ -18,6 +18,7 @@ class QuranicGamesHandler {
       const message = QuranicGames.getGamesList();
 
       const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🎯 تخمين الآية', 'qgame:guess')],
         [Markup.button.callback('✍️ أكمل الآية', 'qgame:complete')],
         [Markup.button.callback('🔍 اكتشف الفرق', 'qgame:spot')],
         [Markup.button.callback('🧠 معلومات قرآنية', 'qgame:trivia')],
@@ -32,6 +33,47 @@ class QuranicGamesHandler {
     } catch (error) {
       if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
         console.error('❌ QuranicGames showMenu error:', error);
+        await ctx.reply('❌ حدث خطأ').catch(() => {});
+      }
+    }
+  }
+
+  /**
+   * 0️⃣ لعبة تخمين الآية
+   * المستخدم يخمن السورة من دليل
+   */
+  static async startGuessTheSurah(ctx) {
+    try {
+      if (ctx.callbackQuery) await ctx.answerCbQuery();
+
+      ctx.session = ctx.session || {};
+      const game = QuranicGames.getGuessTheSurahGame();
+
+      ctx.session.gameState = {
+        game: 'quranic',
+        type: game.type,
+        answer: game.answer,
+        reward: game.reward
+      };
+
+      const message = `🎯 <b>تخمين السورة</b>
+
+📌 <b>الدليل:</b> <code>${game.question}</code>
+
+💡 أرسل اسم السورة التي تخمن أنها الإجابة`;
+
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🔄 دليل آخر', 'qgame:guess')],
+        [Markup.button.callback('⬅️ رجوع', 'game:quranic')]
+      ]);
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (error) {
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('❌ GuessTheSurah error:', error);
         await ctx.reply('❌ حدث خطأ').catch(() => {});
       }
     }
