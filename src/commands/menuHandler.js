@@ -205,8 +205,18 @@ ${smartTip}`;
       const user = await User.findOne({ userId: ctx.from.id });
       if (!user) return ctx.reply('❌ لم يتم العثور على ملفك');
 
-      const page = user.khatmaProgress.currentPage || 1;
-      const percent = user.khatmaProgress.percentComplete || 0;
+      // Initialize khatmaProgress if needed
+      if (!user.khatmaProgress) {
+        user.khatmaProgress = { 
+          currentPage: 1, 
+          percentComplete: 0,
+          startDate: new Date(),
+          completionCount: 0
+        };
+      }
+
+      const page = user.khatmaProgress?.currentPage || 1;
+      const percent = user.khatmaProgress?.percentComplete || 0;
       const message = `🕌 تقدم الختمة لدي: صفحة ${page}/604 (${percent}%)\n\n🔗 شارك هذا النص مع أصدقائك أو في مجموعاتك لتشجيعهم:\n` +
         `أتابع ختمة المصحف — صفحة ${page} (${percent}%). انضموا معي!`;
 
@@ -222,8 +232,19 @@ ${smartTip}`;
       const user = await User.findOne({ userId: ctx.from.id });
       if (!user) return ctx.reply('❌ لم يتم العثور على ملفك');
 
+      // Initialize khatmaProgress if needed
+      if (!user.khatmaProgress) {
+        user.khatmaProgress = { 
+          currentPage: 1, 
+          percentComplete: 0, 
+          startDate: new Date(),
+          completionCount: 0,
+          daysActive: 0
+        };
+      }
+
       const now = new Date();
-      const startDate = user.khatmaProgress.startDate || user.createdAt;
+      const startDate = user.khatmaProgress?.startDate || user.createdAt;
       const daysSinceStart = Math.floor((now - new Date(startDate)) / (1000 * 60 * 60 * 24));
       const pagesRead = user.khatmaProgress.currentPage - 1;
       const avgPerDay = daysSinceStart > 0 ? (pagesRead / daysSinceStart).toFixed(2) : 0;
@@ -328,6 +349,17 @@ ${user.khatmaProgress.percentComplete > 50 ? '🎯 أحسنت! أنت في ال�
       const { User } = require('../database/models');
       const user = await User.findOne({ userId: ctx.from.id });
       if (!user) return ctx.reply('❌ لم يتم العثور على ملفك');
+
+      // Initialize khatmaProgress if needed
+      if (!user.khatmaProgress) {
+        user.khatmaProgress = { 
+          currentPage: 1, 
+          percentComplete: 0,
+          startDate: new Date(),
+          completionCount: 0,
+          daysActive: 0
+        };
+      }
 
       user.savedKhatmas = user.savedKhatmas || [];
       const snapshot = {
