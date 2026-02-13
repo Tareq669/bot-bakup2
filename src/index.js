@@ -1636,19 +1636,19 @@ bot.action('quote:random', async (ctx) => {
     const quote = await ContentProvider.getQuote();
     
     const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('❤️ حفظ', 'quote:save')],
+      [Markup.button.callback('❤️ حفظ', 'quote:save'), Markup.button.callback('📋 نسخ', 'quote:copy')],
       [Markup.button.callback('📤 شارك', 'quote:share')],
-      [Markup.button.callback('اقتباس جديد', 'quote:random')],
+      [Markup.button.callback('🆕 جديد', 'quote:random')],
       [Markup.button.callback('⬅️ رجوع', 'menu:quotes')]
     ]);
 
     try {
-      await ctx.editMessageText(`✨ <b>اقتباس ملهم</b>\n\n${quote}`, {
+      await ctx.editMessageText(`✨ <b>اقتباس ملهم</b>\n\n<code>${quote}</code>`, {
         parse_mode: 'HTML',
         reply_markup: buttons.reply_markup
       });
     } catch (e) {
-      await ctx.reply(`✨ <b>اقتباس ملهم</b>\n\n${quote}`, {
+      await ctx.reply(`✨ <b>اقتباس ملهم</b>\n\n<code>${quote}</code>`, {
         parse_mode: 'HTML',
         reply_markup: buttons.reply_markup
       });
@@ -1784,6 +1784,41 @@ bot.action('quote:favorites', async (ctx) => {
   }
 });
 
+bot.action('quote:copy', async (ctx) => {
+  try {
+    const ContentProvider = require('./content/contentProvider');
+    const quote = await ContentProvider.getQuote();
+    
+    // Store quote in clipboard context
+    ctx.session = ctx.session || {};
+    ctx.session.lastContent = quote;
+    
+    // Send as text that can be copied
+    const message = `📋 <b>انسخ الاقتباس:</b>\n\n<code>${quote}</code>\n\n✅ يمكنك الآن نسخ النص بالضغط عليه`;
+    
+    const buttons = Markup.inlineKeyboard([
+      [Markup.button.callback('⬅️ رجوع', 'quote:random')]
+    ]);
+    
+    try {
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (e) {
+      await ctx.reply(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    }
+    
+    await ctx.answerCbQuery('📋 تم نسخ الاقتباس إلى الحافظة!');
+  } catch (error) {
+    console.error('Error in quote:copy:', error);
+    await ctx.answerCbQuery('❌ حدث خطأ في نسخ الاقتباس');
+  }
+});
+
 bot.action('menu:quotes', (ctx) => MenuHandler.handleQuotesMenu(ctx));
 
 // --- POETRY SYSTEM HANDLERS ---
@@ -1793,19 +1828,19 @@ bot.action('poetry:random', async (ctx) => {
     const poem = await ContentProvider.getPoetry();
     
     const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('❤️ حفظ', 'poetry:save')],
+      [Markup.button.callback('❤️ حفظ', 'poetry:save'), Markup.button.callback('📋 نسخ', 'poetry:copy')],
       [Markup.button.callback('📤 شارك', 'poetry:share')],
-      [Markup.button.callback('قصيدة جديدة', 'poetry:random')],
+      [Markup.button.callback('🆕 جديدة', 'poetry:random')],
       [Markup.button.callback('⬅️ رجوع', 'menu:poetry')]
     ]);
 
     try {
-      await ctx.editMessageText(`📖 <b>قصيدة عربية أصيلة</b>\n\n${poem}`, {
+      await ctx.editMessageText(`📖 <b>قصيدة عربية أصيلة</b>\n\n<code>${poem}</code>`, {
         parse_mode: 'HTML',
         reply_markup: buttons.reply_markup
       });
     } catch (e) {
-      await ctx.reply(`📖 <b>قصيدة عربية أصيلة</b>\n\n${poem}`, {
+      await ctx.reply(`📖 <b>قصيدة عربية أصيلة</b>\n\n<code>${poem}</code>`, {
         parse_mode: 'HTML',
         reply_markup: buttons.reply_markup
       });
@@ -1938,6 +1973,41 @@ bot.action('poetry:favorites', async (ctx) => {
   } catch (error) {
     console.error('Error in poetry:favorites:', error);
     await ctx.answerCbQuery('❌ حدث خطأ في عرض القصائد المحفوظة');
+  }
+});
+
+bot.action('poetry:copy', async (ctx) => {
+  try {
+    const ContentProvider = require('./content/contentProvider');
+    const poem = await ContentProvider.getPoetry();
+    
+    // Store poem in clipboard context
+    ctx.session = ctx.session || {};
+    ctx.session.lastContent = poem;
+    
+    // Send as text that can be copied
+    const message = `📋 <b>انسخ القصيدة:</b>\n\n<code>${poem}</code>\n\n✅ يمكنك الآن نسخ النص بالضغط عليه`;
+    
+    const buttons = Markup.inlineKeyboard([
+      [Markup.button.callback('⬅️ رجوع', 'poetry:random')]
+    ]);
+    
+    try {
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (e) {
+      await ctx.reply(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    }
+    
+    await ctx.answerCbQuery('📋 تم نسخ القصيدة إلى الحافظة!');
+  } catch (error) {
+    console.error('Error in poetry:copy:', error);
+    await ctx.answerCbQuery('❌ حدث خطأ في نسخ القصيدة');
   }
 });
 
