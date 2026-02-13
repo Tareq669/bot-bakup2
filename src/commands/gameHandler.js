@@ -230,7 +230,7 @@ class GameHandler {
       const buttons = Markup.inlineKeyboard([
         [Markup.button.callback('🎯 تخمين الآية', 'qgame:guess_verse')],
         [Markup.button.callback('✍️ أكمل الآية', 'qgame:complete_verse')],
-        [Markup.button.callback('🔍 اكتشف الفرق', 'qgame:spot_diff')],
+        [Markup.button.callback('🔍 اكتشف الفرق', 'qgame:spot_difference')],
         [Markup.button.callback('🧠 معلومات قرآنية', 'qgame:trivia')],
         [Markup.button.callback('📊 عد الآيات', 'qgame:surah_count')],
         [Markup.button.callback('⬅️ رجوع', 'menu:games')]
@@ -323,6 +323,7 @@ class GameHandler {
         game: 'quranic',
         type: 'spot_difference',
         isCorrect: game.isCorrect,
+        correctAnswer: game.isCorrect.toString(), // 'true' or 'false'
         correctVerse: game.correctVerse,
         reward: game.reward,
         surah: game.surah
@@ -335,7 +336,7 @@ class GameHandler {
           Markup.button.callback('✅ صحيحة', 'qgame:spot_correct'),
           Markup.button.callback('❌ خاطئة', 'qgame:spot_wrong')
         ],
-        [Markup.button.callback('🔄 لعبة أخرى', 'qgame:spot_diff')],
+        [Markup.button.callback('🔄 لعبة أخرى', 'qgame:spot_difference')],
         [Markup.button.callback('⬅️ رجوع', 'game:quranic')]
       ]);
 

@@ -1226,22 +1226,22 @@ bot.action('game:luck', (ctx) => GameHandler.handleLuck(ctx));
 bot.action('game:challenges', (ctx) => GameHandler.handleChallenges(ctx));
 
 // --- QURANIC GAMES HANDLERS ---
-bot.action('game:quranic', (ctx) => GameHandler.handleQuranicMenu(ctx));
-bot.action('qgame:guess_verse', (ctx) => GameHandler.handleGuessVerse(ctx));
-bot.action('qgame:complete_verse', (ctx) => GameHandler.handleCompleteVerse(ctx));
-bot.action('qgame:spot_diff', (ctx) => GameHandler.handleSpotDifference(ctx));
+bot.action('game:quranic', async (ctx) => await GameHandler.handleQuranicMenu(ctx));
+bot.action('qgame:guess_verse', async (ctx) => await GameHandler.handleGuessVerse(ctx));
+bot.action('qgame:complete_verse', async (ctx) => await GameHandler.handleCompleteVerse(ctx));
+bot.action('qgame:spot_difference', async (ctx) => await GameHandler.handleSpotDifference(ctx));
 bot.action('qgame:spot_correct', async (ctx) => {
   await GameHandler.processQuranicAnswer(ctx, 'true');
 });
 bot.action('qgame:spot_wrong', async (ctx) => {
   await GameHandler.processQuranicAnswer(ctx, 'false');
 });
-bot.action('qgame:trivia', (ctx) => GameHandler.handleTriviaQuestion(ctx));
-bot.action(/qgame:trivia_answer:(.+)/, (ctx) => {
+bot.action('qgame:trivia', async (ctx) => await GameHandler.handleTriviaQuestion(ctx));
+bot.action(/qgame:trivia_answer:(.+)/, async (ctx) => {
   const answer = ctx.match[1];
-  GameHandler.processQuranicAnswer(ctx, answer);
+  await GameHandler.processQuranicAnswer(ctx, answer);
 });
-bot.action('qgame:surah_count', (ctx) => GameHandler.handleSurahCount(ctx));
+bot.action('qgame:surah_count', async (ctx) => await GameHandler.handleSurahCount(ctx));
 
 // --- KEYBOARD BUTTON HANDLERS - MUST BE BEFORE bot.on('text') ---
 bot.hears('🕌 الختمة', (ctx) => MenuHandler.handleKhatmaMenu(ctx));

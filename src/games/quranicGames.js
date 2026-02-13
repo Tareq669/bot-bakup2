@@ -324,8 +324,8 @@ class QuranicGames {
       if (won) {
         user.gameStats[gameType].won++;
         user.gameStats[gameType].totalPoints += points;
-        // التأكد من أن coins قيمة صالحة وليست NaN
-        user.coins = (user.coins || 0) + (points || 0);
+        // Note: Coins are added via EconomyManager.addCoins in processQuranicAnswer
+        // Don't add coins here to avoid double-counting
       }
 
       await user.save();
