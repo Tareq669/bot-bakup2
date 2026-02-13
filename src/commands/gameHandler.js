@@ -36,8 +36,11 @@ class GameHandler {
 
       await ctx.editMessageText(message, buttons);
     } catch (error) {
-      console.error('Error:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified"
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -84,8 +87,11 @@ class GameHandler {
 
       await ctx.editMessageText(message, buttons);
     } catch (error) {
-      console.error('Error:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس السؤال
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -119,8 +125,11 @@ class GameHandler {
 
       await ctx.editMessageText(message, buttons);
     } catch (error) {
-      console.error('Error:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified"
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -139,8 +148,11 @@ class GameHandler {
 
       await ctx.editMessageText(result.message, buttons);
     } catch (error) {
-      console.error('Error:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند رمي نفس الرقم
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -169,8 +181,11 @@ class GameHandler {
 
       await ctx.editMessageText(message, { parse_mode: 'HTML', reply_markup: buttons.reply_markup });
     } catch (error) {
-      console.error('Error in handleLuck:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس النتيجة
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error in handleLuck:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -198,8 +213,11 @@ class GameHandler {
 
       await ctx.editMessageText(message, { parse_mode: 'HTML', reply_markup: buttons.reply_markup });
     } catch (error) {
-      console.error('Error in handleChallenges:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس التحدي
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error in handleChallenges:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -223,8 +241,11 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
-      console.error('Error in handleQuranicMenu:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified"
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error in handleQuranicMenu:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -252,8 +273,11 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
-      console.error('Error in handleGuessVerse:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس اللعبة
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error in handleGuessVerse:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -282,8 +306,11 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
-      console.error('Error in handleCompleteVerse:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس اللعبة
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error in handleCompleteVerse:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -317,8 +344,11 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
-      console.error('Error in handleSpotDifference:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس اللعبة
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error in handleSpotDifference:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -350,8 +380,11 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
-      console.error('Error in handleTriviaQuestion:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس السؤال
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error in handleTriviaQuestion:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
@@ -380,8 +413,11 @@ class GameHandler {
         reply_markup: buttons.reply_markup
       });
     } catch (error) {
-      console.error('Error in handleSurahCount:', error);
-      ctx.reply('❌ حدث خطأ');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس اللعبة
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error in handleSurahCount:', error);
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
