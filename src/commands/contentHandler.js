@@ -6,119 +6,191 @@ const Formatter = require('../ui/formatter');
 class ContentHandler {
   // Handle Baqfat (bio suggestions)
   static async handleBaqfat(ctx) {
-    const bio = await ContentProvider.getBioSuggestions();
-    const message = `🎭 **السيرة المقترحة:**\n\n"${bio}"`;
+    try {
+      const bio = await ContentProvider.getBioSuggestions();
+      const message = `🎭 **السيرة المقترحة:**\n\n"${bio}"`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('🔄 أخرى', 'menu:baqfat')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🔄 أخرى', 'menu:baqfat')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling baqfat:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل السيرة');
+      }
+    }
   }
 
   // Handle Avatars
   static async handleAvatars(ctx) {
-    const avatar = await ContentProvider.getAvatars();
-    const message = `🎨 **الصورة المقترحة:**\n\n${avatar.emoji} ${avatar.name}`;
+    try {
+      const avatar = await ContentProvider.getAvatars();
+      const message = `🎨 **الصورة المقترحة:**\n\n${avatar.emoji} ${avatar.name}`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('🔄 أخرى', 'menu:avatars')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🔄 أخرى', 'menu:avatars')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling avatars:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الصورة');
+      }
+    }
   }
 
   // Handle Tweets
   static async handleTweets(ctx) {
-    const tweet = await ContentProvider.getTweets();
-    const message = `✨ **تريد عشوائي:**\n\n"${tweet}"`;
+    try {
+      const tweet = await ContentProvider.getTweets();
+      const message = `✨ **تريد عشوائي:**\n\n"${tweet}"`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('🔄 آخر', 'menu:tweets')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🔄 آخر', 'menu:tweets')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling tweets:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل التريد');
+      }
+    }
   }
 
   // Handle Books
   static async handleBooks(ctx) {
-    const book = await ContentProvider.getBooks();
-    const message = `📚 **كتاب موصى به:**\n\n${book.emoji} ${book.title}\n✍️ ${book.author}`;
+    try {
+      const book = await ContentProvider.getBooks();
+      const message = `📚 **كتاب موصى به:**\n\n${book.emoji} ${book.title}\n✍️ ${book.author}`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('📖 آخر', 'menu:books')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('📖 آخر', 'menu:books')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling books:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الكتاب');
+      }
+    }
   }
 
   // Handle Stories
   static async handleStories(ctx) {
-    const story = await ContentProvider.getStories();
-    const message = `📖 **${story.title}**\n\n${story.content}`;
+    try {
+      const story = await ContentProvider.getStories();
+      const message = `📖 **${story.title}**\n\n${story.content}`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('📖 قصة أخرى', 'menu:stories')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('📖 قصة أخرى', 'menu:stories')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling stories:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل القصة');
+      }
+    }
   }
 
   // Handle Movies
   static async handleMovies(ctx) {
-    const movie = await ContentProvider.getMovies();
-    const message = `🎬 **${movie.emoji} ${movie.title}**\n\n${movie.genre} | ⭐${movie.rating}`;
+    try {
+      const movie = await ContentProvider.getMovies();
+      const message = `🎬 **${movie.emoji} ${movie.title}**\n\n${movie.genre} | ⭐${movie.rating}`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('🎬 آخر', 'menu:movies')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🎬 آخر', 'menu:movies')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling movies:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الفيلم');
+      }
+    }
   }
 
   // Handle Wallpapers
   static async handleWallpapers(ctx) {
-    const wallpaper = await ContentProvider.getWallpapers();
-    const message = `🖼️ **${wallpaper.emoji} ${wallpaper.name}**`;
+    try {
+      const wallpaper = await ContentProvider.getWallpapers();
+      const message = `🖼️ **${wallpaper.emoji} ${wallpaper.name}**`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('🖼️ أخرى', 'menu:wallpapers')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🖼️ أخرى', 'menu:wallpapers')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling wallpapers:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الخلفية');
+      }
+    }
   }
 
   // Handle Headers
   static async handleHeaders(ctx) {
-    const header = await ContentProvider.getHeaders();
-    const message = `🎬 **رأس الملف:**\n\n"${header}"`;
+    try {
+      const header = await ContentProvider.getHeaders();
+      const message = `🎬 **رأس الملف:**\n\n"${header}"`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('🎬 آخر', 'menu:headers')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🎬 آخر', 'menu:headers')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling headers:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الرأس');
+      }
+    }
   }
 
   // Handle Songs
   static async handleSongs(ctx) {
-    const song = await ContentProvider.getSongs();
-    const message = `🎵 **${song.emoji}**\n\n${song.title}\n🎤 ${song.artist}`;
+    try {
+      const song = await ContentProvider.getSongs();
+      const message = `🎵 **${song.emoji}**\n\n${song.title}\n🎤 ${song.artist}`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('🎵 أخرى', 'menu:songs')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🎵 أخرى', 'menu:songs')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling songs:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الأغنية');
+      }
+    }
   }
 
   // Handle Quranic Verses - مع القراءات الصوتية
@@ -144,8 +216,11 @@ class ContentHandler {
 
       await ctx.editMessageText(message, buttons);
     } catch (error) {
-      console.error('Error handling Quran:', error);
-      await ctx.reply('❌ حدث خطأ في تحميل الآية');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling Quran:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الآية');
+      }
     }
   }
 
@@ -206,8 +281,11 @@ class ContentHandler {
 
       await ctx.editMessageText(message, buttons);
     } catch (error) {
-      console.error('Error handling morning adhkar:', error);
-      await ctx.reply('❌ حدث خطأ في تحميل الأذكار');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس الذكر
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling morning adhkar:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الأذكار');
+      }
     }
   }
 
@@ -239,8 +317,11 @@ class ContentHandler {
 
       await ctx.editMessageText(message, buttons);
     } catch (error) {
-      console.error('Error handling evening adhkar:', error);
-      await ctx.reply('❌ حدث خطأ في تحميل الأذكار');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس الذكر
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling evening adhkar:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الأذكار');
+      }
     }
   }
 
@@ -272,8 +353,11 @@ class ContentHandler {
 
       await ctx.editMessageText(message, buttons);
     } catch (error) {
-      console.error('Error handling sleep adhkar:', error);
-      await ctx.reply('❌ حدث خطأ في تحميل الأذكار');
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس الذكر
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling sleep adhkar:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل الأذكار');
+      }
     }
   }
 
@@ -310,15 +394,23 @@ class ContentHandler {
 
   // Handle Entertainment
   static async handleEntertainment(ctx) {
-    const entertainment = await ContentProvider.getEntertainment();
-    const message = `😂 **نكتة:**\n\n${entertainment}`;
+    try {
+      const entertainment = await ContentProvider.getEntertainment();
+      const message = `😂 **نكتة:**\n\n${entertainment}`;
 
-    const buttons = Markup.inlineKeyboard([
-      [Markup.button.callback('😂 أخرى', 'menu:entertainment')],
-      [Markup.button.callback('⬅️ رجوع', 'menu:main')]
-    ]);
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('😂 أخرى', 'menu:entertainment')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:main')]
+      ]);
 
-    await ctx.editMessageText(message, buttons);
+      await ctx.editMessageText(message, buttons);
+    } catch (error) {
+      // تجاهل خطأ "message is not modified" حيث يحدث عند اختيار نفس المحتوى
+      if (error.response?.error_code !== 400 || !error.response?.description?.includes('message is not modified')) {
+        console.error('Error handling entertainment:', error);
+        await ctx.reply('❌ حدث خطأ في تحميل النكتة');
+      }
+    }
   }
 }
 
