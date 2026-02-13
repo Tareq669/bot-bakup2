@@ -427,3 +427,5 @@ class GameHandler {
     }
   }
 }
+
+module.exports = GameHandler;
