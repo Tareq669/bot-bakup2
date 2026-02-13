@@ -33,14 +33,16 @@ class EconomyManager {
       user.xp = currentXp + Math.floor(validAmount / 10);
       await user.save();
 
-      // Create transaction record
-      await Transaction.create({
-        userId,
-        type: 'earn',
-        amount,
-        reason,
-        status: 'completed'
-      });
+      // Create transaction record only if amount > 0
+      if (validAmount > 0) {
+        await Transaction.create({
+          userId,
+          type: 'earn',
+          amount: validAmount,
+          reason,
+          status: 'completed'
+        });
+      }
 
       return user.coins;
     } catch (error) {
@@ -66,14 +68,16 @@ class EconomyManager {
       user.coins = currentCoins - validAmount;
       await user.save();
 
-      // Create transaction record
-      await Transaction.create({
-        userId,
-        type: 'spend',
-        amount,
-        reason,
-        status: 'completed'
-      });
+      // Create transaction record only if amount > 0
+      if (validAmount > 0) {
+        await Transaction.create({
+          userId,
+          type: 'spend',
+          amount: validAmount,
+          reason,
+          status: 'completed'
+        });
+      }
 
       return user.coins;
     } catch (error) {
@@ -105,24 +109,26 @@ class EconomyManager {
       await fromUser.save();
       await toUser.save();
 
-      // Create transaction records
-      await Transaction.create({
-        userId: fromUserId,
-        type: 'transfer',
-        amount,
-        relatedUserId: toUserId,
-        reason: 'تحويل إلى مستخدم آخر',
-        status: 'completed'
-      });
+      // Create transaction records only if amount > 0
+      if (validAmount > 0) {
+        await Transaction.create({
+          userId: fromUserId,
+          type: 'transfer',
+          amount: validAmount,
+          relatedUserId: toUserId,
+          reason: 'تحويل إلى مستخدم آخر',
+          status: 'completed'
+        });
 
-      await Transaction.create({
-        userId: toUserId,
-        type: 'earn',
-        amount,
-        relatedUserId: fromUserId,
-        reason: 'استقبال تحويل',
-        status: 'completed'
-      });
+        await Transaction.create({
+          userId: toUserId,
+          type: 'earn',
+          amount: validAmount,
+          relatedUserId: fromUserId,
+          reason: 'استقبال تحويل',
+          status: 'completed'
+        });
+      }
 
       return true;
     } catch (error) {
