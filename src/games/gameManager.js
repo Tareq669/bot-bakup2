@@ -42,6 +42,7 @@ ${result === 'win' ? `✅ انتصرت! +${prize} عملة` : result === 'lost' 
   }
 
   // Guess Number Game
+  /*
       },
       {
         question: 'كم عدد أجزاء القرآن الكريم؟',
@@ -873,6 +874,7 @@ ${result === 'win' ? `✅ انتصرت! +${prize} عملة` : result === 'lost' 
         options: ['الإخلاص', 'الفلق', 'الناس', 'الكافرون'],
         answer: 'الإخلاص'
       }
+  */
   static async playGuessNumber(userId, userGuess, gameNumber) {
     let result = 'lost';
     let prize = 0;
