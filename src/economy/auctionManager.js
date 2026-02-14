@@ -124,7 +124,7 @@ class AuctionManager {
     if (!winnerId) {
       await this.broadcastMessage(
         bot,
-        '⏹️ <b>انتهى المزاد</b>\n\n🏷️ العنصر: ' + auction.itemName + '\nلم يتم تسجيل مزايدات.'
+        `⏹️ <b>انتهى المزاد</b>\n\n🏷️ العنصر: ${  auction.itemName  }\nلم يتم تسجيل مزايدات.`
       );
       return;
     }
@@ -147,18 +147,18 @@ class AuctionManager {
         .sendMessage(
           winnerId,
           '🎉 <b>فزت بالمزاد!</b>\n\n' +
-            '🏷️ العنصر: ' + auction.itemName + '\n' +
-            '💰 السعر النهائي: ' + winnerAmount + ' عملة',
+            `🏷️ العنصر: ${  auction.itemName  }\n` +
+            `💰 السعر النهائي: ${  winnerAmount  } عملة`,
           { parse_mode: 'HTML' }
         )
         .catch(() => {});
     }
 
-    const winnerName = user.firstName || (user.username ? '@' + user.username : 'مستخدم ' + winnerId);
+    const winnerName = user.firstName || (user.username ? `@${  user.username}` : `مستخدم ${  winnerId}`);
     await this.broadcastMessage(
       bot,
-      '✅ <b>انتهى المزاد</b>\n\n🏷️ العنصر: ' + auction.itemName + '\n' +
-        '🏆 الفائز: ' + winnerName + '\n💰 السعر النهائي: ' + winnerAmount + ' عملة'
+      `✅ <b>انتهى المزاد</b>\n\n🏷️ العنصر: ${  auction.itemName  }\n` +
+        `🏆 الفائز: ${  winnerName  }\n💰 السعر النهائي: ${  winnerAmount  } عملة`
     );
 
     if (bot) {
@@ -170,9 +170,9 @@ class AuctionManager {
           .sendMessage(
             loserId,
             '❌ <b>انتهى المزاد</b>\n\n' +
-              '🏷️ العنصر: ' + auction.itemName + '\n' +
-              '🏆 الفائز: ' + winnerName + '\n' +
-              '💰 السعر النهائي: ' + winnerAmount + ' عملة',
+              `🏷️ العنصر: ${  auction.itemName  }\n` +
+              `🏆 الفائز: ${  winnerName  }\n` +
+              `💰 السعر النهائي: ${  winnerAmount  } عملة`,
             { parse_mode: 'HTML' }
           )
           .catch(() => {});
@@ -235,12 +235,12 @@ class AuctionManager {
     await auction.save();
 
     const bidder = await User.findOne({ userId }).select('firstName username');
-    const bidderName = bidder?.firstName || (bidder?.username ? '@' + bidder.username : 'مستخدم ' + userId);
+    const bidderName = bidder?.firstName || (bidder?.username ? `@${  bidder.username}` : `مستخدم ${  userId}`);
 
     await this.broadcastMessage(
       bot,
       '📣 <b>مزايدة جديدة</b>\n\n' +
-        '👤 ' + bidderName + '\n🏷️ ' + auction.itemName + '\n💰 ' + amount + ' عملة'
+        `👤 ${  bidderName  }\n🏷️ ${  auction.itemName  }\n💰 ${  amount  } عملة`
     );
 
     if (bot && previousBidderId && previousBidderId !== userId) {
@@ -248,9 +248,9 @@ class AuctionManager {
         .sendMessage(
           previousBidderId,
           '⚠️ <b>تم تجاوزك في المزاد</b>\n\n' +
-            '🏷️ العنصر: ' + auction.itemName + '\n' +
-            '💰 المزايدة الجديدة: ' + amount + ' عملة\n' +
-            '⏳ الوقت المتبقي: ' + this.formatTimeLeft(auction.endAt),
+            `🏷️ العنصر: ${  auction.itemName  }\n` +
+            `💰 المزايدة الجديدة: ${  amount  } عملة\n` +
+            `⏳ الوقت المتبقي: ${  this.formatTimeLeft(auction.endAt)}`,
           { parse_mode: 'HTML' }
         )
         .catch(() => {});
@@ -259,9 +259,9 @@ class AuctionManager {
     return {
       ok: true,
       message:
-        '✅ تم تسجيل مزايدتك على ' + auction.itemName + '\n' +
-        '💰 المزايدة الحالية: ' + amount + ' عملة\n' +
-        '⏳ الوقت المتبقي: ' + this.formatTimeLeft(auction.endAt),
+        `✅ تم تسجيل مزايدتك على ${  auction.itemName  }\n` +
+        `💰 المزايدة الحالية: ${  amount  } عملة\n` +
+        `⏳ الوقت المتبقي: ${  this.formatTimeLeft(auction.endAt)}`,
       balance: updatedBalance
     };
   }
@@ -271,12 +271,12 @@ class AuctionManager {
       const currentBid = auction.highestBid?.amount || auction.basePrice;
       const timeLeft = this.formatTimeLeft(auction.endAt);
       const endAt = this.formatEndAt(auction.endAt);
-      return auction.itemId + '. ' + auction.itemName + ' - ' + currentBid + ' عملة (⏳ ' + timeLeft + ')\n⏰ ينتهي: ' + endAt;
+      return `${auction.itemId  }. ${  auction.itemName  } - ${  currentBid  } عملة (⏳ ${  timeLeft  })\n⏰ ينتهي: ${  endAt}`;
     });
 
     return (
-      '🎪 <b>سوق المزاد</b>\n\n' +
-      lines.join('\n') + '\n\n' +
+      `🎪 <b>سوق المزاد</b>\n\n${
+        lines.join('\n')  }\n\n` +
       '💰 أرسل رقم العنصر للمزايدة أو اكتب (إلغاء)'
     );
   }
@@ -296,15 +296,15 @@ class AuctionManager {
       const currentBid = auction.highestBid?.amount || auction.basePrice;
       const status = auction.highestBid?.userId === userId ? '✅ أنت الأعلى' : '⚠️ تم تجاوزك';
       return (
-        '• ' + auction.itemName + '\n' +
-        '  مزايدتك: ' + (lastBid?.amount || 0) + ' عملة\n' +
-        '  الأعلى الآن: ' + currentBid + ' عملة\n' +
-        '  ' + status + '\n' +
-        '  ⏳ المتبقي: ' + this.formatTimeLeft(auction.endAt)
+        `• ${  auction.itemName  }\n` +
+        `  مزايدتك: ${  lastBid?.amount || 0  } عملة\n` +
+        `  الأعلى الآن: ${  currentBid  } عملة\n` +
+        `  ${  status  }\n` +
+        `  ⏳ المتبقي: ${  this.formatTimeLeft(auction.endAt)}`
       );
     });
 
-    return '📌 <b>مزاداتك</b>\n\n' + lines.join('\n\n');
+    return `📌 <b>مزاداتك</b>\n\n${  lines.join('\n\n')}`;
   }
 
   static async sendTimeLeftNotifications(bot) {
@@ -326,8 +326,8 @@ class AuctionManager {
         await this.broadcastMessage(
           bot,
           '⏳ <b>تنبيه مزاد</b>\n\n' +
-            'تبقى وقت قليل على: ' + auction.itemName + '\n' +
-            '⏰ المتبقي: ' + this.formatTimeLeft(auction.endAt)
+            `تبقى وقت قليل على: ${  auction.itemName  }\n` +
+            `⏰ المتبقي: ${  this.formatTimeLeft(auction.endAt)}`
         );
       }
     }
