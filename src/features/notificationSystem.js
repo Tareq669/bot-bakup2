@@ -18,15 +18,20 @@ class NotificationSystem {
    */
   async sendNotification(userId, message, options = {}) {
     try {
+      const user = await User.findOne({ userId });
+      if (!user || user.notifications?.enabled === false) {
+        return;
+      }
+
       await this.bot.telegram.sendMessage(userId, message, {
         parse_mode: 'HTML',
         ...options
       });
 
       // تسجيل الإشعار في قاعدة البيانات
-      await User.findByIdAndUpdate(userId, {
+      await User.findOneAndUpdate({ userId }, {
         $push: {
-          notifications: {
+          notificationsLog: {
             message,
             timestamp: new Date(),
             read: false
@@ -46,12 +51,15 @@ class NotificationSystem {
   scheduleDailyAdhkarNotifications() {
     // الساعة 7 صباحاً كل يوم
     node_cron.schedule('0 7 * * *', async () => {
-      const users = await User.find({ 'notifications.adhkarReminder': true });
+      const users = await User.find({
+        'notifications.enabled': true,
+        'notifications.adhkarReminder': true
+      });
 
       const message = '📿 <b>حان وقت الأذكار الصباحية</b>\n\nكل صباح جميل معك! 🌅\n\n/adhkar';
 
       for (const user of users) {
-        await this.sendNotification(user._id, message);
+        await this.sendNotification(user.userId, message);
       }
 
       logger.info('📬 تم إرسال تذكيرات الأذكار الصباحية');
@@ -59,12 +67,15 @@ class NotificationSystem {
 
     // الساعة 7 مساءً كل يوم
     node_cron.schedule('0 19 * * *', async () => {
-      const users = await User.find({ 'notifications.adhkarReminder': true });
+      const users = await User.find({
+        'notifications.enabled': true,
+        'notifications.adhkarReminder': true
+      });
 
       const message = '📿 <b>حان وقت أذكار المساء</b>\n\nمساء الخير! 🌙\n\n/adhkar';
 
       for (const user of users) {
-        await this.sendNotification(user._id, message);
+        await this.sendNotification(user.userId, message);
       }
 
       logger.info('📬 تم إرسال تذكيرات الأذكار المسائية');
@@ -77,12 +88,15 @@ class NotificationSystem {
   schedulePrayerTimeNotifications() {
     // سيتم حسابها حسب موقع المستخدم (اختياري متقدم)
     node_cron.schedule('0 */4 * * *', async () => {
-      const users = await User.find({ 'notifications.prayerReminder': true });
+      const users = await User.find({
+        'notifications.enabled': true,
+        'notifications.prayerReminder': true
+      });
 
       const message = '🕌 <b>تذكير الصلاة</b>\n\nحافظ على الصلاة في أوقاتها\n\n/adhkar';
 
       for (const user of users) {
-        await this.sendNotification(user._id, message);
+        await this.sendNotification(user.userId, message);
       }
     });
   }
@@ -95,12 +109,15 @@ class NotificationSystem {
 
     if (timeUntilEvent > 0) {
       setTimeout(async () => {
-        const users = await User.find({ 'notifications.eventReminder': true });
+        const users = await User.find({
+          'notifications.enabled': true,
+          'notifications.eventReminder': true
+        });
 
         const message = `🎉 <b>${eventName}</b>\n\nبدأت الآن! انضم إلينا\n\n/events`;
 
         for (const user of users) {
-          await this.sendNotification(user._id, message);
+          await this.sendNotification(user.userId, message);
         }
       }, timeUntilEvent - 3600000); // ساعة قبل الحدث
     }
@@ -119,11 +136,14 @@ class NotificationSystem {
         '📈 تقدمك اليوم سيكون نجاحك غداً'
       ];
 
-      const users = await User.find({ 'notifications.motivational': true });
+      const users = await User.find({
+        'notifications.enabled': true,
+        'notifications.motivational': true
+      });
       const randomMsg = messages[Math.floor(Math.random() * messages.length)];
 
       for (const user of users) {
-        await this.sendNotification(user._id, randomMsg);
+        await this.sendNotification(user.userId, randomMsg);
       }
     });
   }
@@ -132,12 +152,13 @@ class NotificationSystem {
    * الحصول على تفضيلات الإشعارات
    */
   async getNotificationPreferences(userId) {
-    const user = await User.findById(userId);
+    const user = await User.findOne({ userId });
     return {
       adhkarReminder: user.notifications?.adhkarReminder || false,
       prayerReminder: user.notifications?.prayerReminder || false,
       eventReminder: user.notifications?.eventReminder || false,
-      motivational: user.notifications?.motivational || false
+      motivational: user.notifications?.motivational || false,
+      auctionUpdates: user.notifications?.auctionUpdates || false
     };
   }
 
@@ -145,8 +166,8 @@ class NotificationSystem {
    * تحديث تفضيلات الإشعارات
    */
   async updateNotificationPreferences(userId, preferences) {
-    await User.findByIdAndUpdate(userId, {
-      'notifications': preferences
+    await User.findOneAndUpdate({ userId }, {
+      notifications: preferences
     });
   }
 

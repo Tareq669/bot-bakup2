@@ -153,6 +153,23 @@ const userSchema = new mongoose.Schema({
     }
   },
 
+  notifications: {
+    enabled: { type: Boolean, default: true },
+    adhkarReminder: { type: Boolean, default: false },
+    prayerReminder: { type: Boolean, default: false },
+    eventReminder: { type: Boolean, default: false },
+    motivational: { type: Boolean, default: false },
+    gameUpdates: { type: Boolean, default: false },
+    rewardUpdates: { type: Boolean, default: false },
+    auctionUpdates: { type: Boolean, default: false }
+  },
+
+  notificationsLog: [{
+    message: String,
+    timestamp: Date,
+    read: { type: Boolean, default: false }
+  }],
+
   // Goals System
   goals: [{
     title: String,

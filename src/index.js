@@ -208,6 +208,35 @@ bot.command('notifications', async (ctx) => {
   }
 });
 
+bot.command('notif', async (ctx) => {
+  try {
+    const parts = ctx.message.text.trim().split(/\s+/);
+    const action = (parts[1] || '').toLowerCase();
+    const { User } = require('./database/models');
+
+    const user = await User.findOne({ userId: ctx.from.id });
+    if (!user) return ctx.reply('❌ لم يتم العثور على ملفك');
+
+    user.notifications = user.notifications || { enabled: true };
+
+    if (action === 'on') {
+      user.notifications.enabled = true;
+      await user.save();
+      return ctx.reply('✅ تم تفعيل الإشعارات');
+    }
+
+    if (action === 'off') {
+      user.notifications.enabled = false;
+      await user.save();
+      return ctx.reply('❌ تم تعطيل الإشعارات');
+    }
+
+    return ctx.reply('استخدم: /notif on|off');
+  } catch (error) {
+    ctx.reply('❌ حدث خطأ في تحديث الإشعارات');
+  }
+});
+
 // Backup System
 bot.command('backup', async (ctx) => {
   const ownerIds = (process.env.BOT_OWNERS || '').split(',').filter(Boolean).map(Number);
@@ -719,10 +748,48 @@ bot.action('new:notifications', async (ctx) => {
   );
 });
 
-bot.action(/notify:(adhkar|prayer|games|rewards|events|stats)/, async (ctx) => {
+bot.action(/notify:(adhkar|prayer|games|rewards|events|auction|stats)/, async (ctx) => {
   const type = ctx.match[1];
+  const { User } = require('./database/models');
 
   let message = '';
+  if (type !== 'stats') {
+    const user = await User.findOne({ userId: ctx.from.id });
+    if (!user) {
+      await ctx.answerCbQuery('❌');
+      return ctx.reply('❌ لم يتم العثور على ملفك');
+    }
+
+    user.notifications = user.notifications || { enabled: true };
+
+    const fieldMap = {
+      adhkar: 'adhkarReminder',
+      prayer: 'prayerReminder',
+      games: 'gameUpdates',
+      rewards: 'rewardUpdates',
+      events: 'eventReminder',
+      auction: 'auctionUpdates'
+    };
+
+    const field = fieldMap[type];
+    user.notifications[field] = !user.notifications[field];
+    await user.save();
+
+    const state = user.notifications[field] ? '✅ تم التفعيل' : '❌ تم التعطيل';
+    const titleMap = {
+      adhkar: '🕌 إشعارات الأذكار',
+      prayer: '⏰ إشعارات الصلاة',
+      games: '🎮 إشعارات الألعاب',
+      rewards: '💰 إشعارات المكافآت',
+      events: '🔔 إشعارات الأحداث',
+      auction: '🏷️ إشعارات المزاد'
+    };
+
+    message = `${titleMap[type]}\n${state}`;
+    await ctx.reply(message, { parse_mode: 'HTML' });
+    return ctx.answerCbQuery('✅ تم');
+  }
+
   switch (type) {
     case 'adhkar':
       message = '🕌 إشعارات الأذكار مفعلة\n✅ ستتلقى تنبيهات يومية بالأذكار';

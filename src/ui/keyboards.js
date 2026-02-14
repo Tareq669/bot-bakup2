@@ -670,6 +670,9 @@ class UIManager {
         Markup.button.callback('📊 إحصائياتي', 'notify:stats')
       ],
       [
+        Markup.button.callback('🏷️ إشعارات المزاد', 'notify:auction')
+      ],
+      [
         Markup.button.callback('⬅️ رجوع', 'new:notifications')
       ]
     ]);
