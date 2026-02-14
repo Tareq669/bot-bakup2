@@ -287,6 +287,16 @@ bot.command('owners', async (ctx) => {
   );
 });
 
+bot.command('givecoins', async (ctx) => {
+  const ownerIds = (process.env.BOT_OWNERS || '').split(',').filter(Boolean).map(Number);
+
+  if (!ownerIds.includes(ctx.from.id)) {
+    return ctx.reply('❌ ليس لديك صلاحية لهذا الأمر');
+  }
+
+  return CommandHandler.handleOwnerGiveCoins(ctx);
+});
+
 // --- OWNER ONLY COMMANDS ---
 bot.command('owner', (ctx) => CommandHandler.handleOwnerPanel(ctx));
 bot.command('panel', (ctx) => CommandHandler.handleOwnerPanel(ctx));
