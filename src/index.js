@@ -2595,20 +2595,28 @@ bot.on('text', async (ctx) => {
     }
 
     // Use AI for smart responses
-    const aiResponse = await AIManager.generateSmartResponse(ctx.from.id, message);
-    ctx.reply(aiResponse, { parse_mode: 'HTML' });
+    try {
+      const aiResponse = await AIManager.generateSmartResponse(ctx.from.id, message);
+      await ctx.reply(aiResponse, { parse_mode: 'HTML' });
 
-    // Record user interaction and update streak
-    AIManager.recordUserInteraction(ctx.from.id, 'message:sent', 1);
-    await LearningSystem.updateUserStreak(ctx.from.id);
+      // Record user interaction and update streak (non-blocking)
+      AIManager.recordUserInteraction(ctx.from.id, 'message:sent', 1);
+      LearningSystem.updateUserStreak(ctx.from.id).catch(err => console.error('Streak error:', err));
 
-    // Check for notifications
-    const notification = await SmartNotifications.getSmartNotification(ctx.from.id, ctx);
-    if (notification && Math.random() < 0.3) {
-      // 30% chance to show notification
-      setTimeout(() => {
-        ctx.reply(SmartNotifications.formatNotification(notification), { parse_mode: 'HTML' });
-      }, 2000);
+      // Check for notifications (non-blocking)
+      SmartNotifications.getSmartNotification(ctx.from.id, ctx)
+        .then(notification => {
+          if (notification && Math.random() < 0.3) {
+            setTimeout(() => {
+              ctx.reply(SmartNotifications.formatNotification(notification), { parse_mode: 'HTML' })
+                .catch(err => console.error('Notification error:', err));
+            }, 2000);
+          }
+        })
+        .catch(err => console.error('Notification check error:', err));
+    } catch (aiError) {
+      console.error('AI response error:', aiError);
+      await ctx.reply('❌ حدث خطأ في معالجة رسالتك');
     }
   } catch (error) {
     console.error('Text handler error:', error);

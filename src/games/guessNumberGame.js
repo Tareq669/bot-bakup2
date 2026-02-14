@@ -124,8 +124,8 @@ class GuessNumberGame {
       if (game.attempts <= 3) reward = 500; // Bonus for quick guess
       else if (game.attempts <= 5) reward = 300;
 
-      // Add coins
-      await EconomyManager.addCoins(ctx.from.id, reward, 'فوز في لعبة التخمين');
+      // Clear game state FIRST
+      ctx.session.guessGame = null;
 
       const message = `
 🎉 <b>مبروك! انت محق!</b>
@@ -143,29 +143,21 @@ class GuessNumberGame {
         [Markup.button.callback('⬅️ رجوع للألعاب', 'menu:games')]
       ]);
 
-      // Clear game state
-      ctx.session.guessGame = null;
-
+      // Send reply immediately
       await ctx.reply(message, {
         parse_mode: 'HTML',
         reply_markup: buttons.reply_markup
       });
+
+      // Add coins in background (non-blocking)
+      EconomyManager.addCoins(ctx.from.id, reward, 'فوز في لعبة التخمين')
+        .catch(err => console.error('❌ خطأ في إضافة عملات:', err));
+
+      console.log('✅ معالجة الإجابة الصحيحة اكتملت');
     } catch (error) {
       console.error('❌ خطأ في معالجة الإجابة الصحيحة:', error);
       ctx.session.guessGame = null;
-      await ctx.reply('❌ حدث خطأ');
-    }
-  }
-
-  /**
-   * معالجة انتهاء اللعبة
-   */
-  static async handleGameOver(ctx, game) {
-    try {
-      const message = `
-❌ <b>انتهت محاولاتك!</b>
-
-🔍 الرقم الصحيح كان: <code>${game.number}</code>
+      await ctx.reply('❌ حدث خطأ').catch(err => console.error('Reply error:', err));
 📊 عدد محاولاتك: <b>${game.attempts}</b>
 
 💡 حاول مرة أخرى!
