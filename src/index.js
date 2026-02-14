@@ -1355,44 +1355,7 @@ bot.action('eco:transfer', async (ctx) => {
     ctx.session = ctx.session || {};
     ctx.session.ecoAwait = { type: 'transfer' };
     await ctx.answerCbQuery('✅ جاهز');
-    await ctx.reply(
-      '💸 أدخل معرّف المستخدم الذي تريد التحويل له:\n\n(مثال: @username أو معرّفه الرقمي)'
-    );
-  } catch (error) {
-    console.error('Transfer error:', error);
-    ctx.answerCbQuery('❌ خطأ');
-  }
-});
-
-bot.action('eco:auction', async (ctx) => {
-  try {
-    const AuctionManager = require('./economy/auctionManager');
-
-    ctx.session = ctx.session || {};
-    ctx.session.ecoAwait = { type: 'auction_select' };
-
-    const auctions = await AuctionManager.getActiveAuctions(bot);
-    const message = AuctionManager.formatAuctionList(auctions);
-
-    await ctx.editMessageText(message, {
-      parse_mode: 'HTML',
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('📌 مزاداتي', 'eco:my_auctions')],
-        [Markup.button.callback('⬅️ رجوع', 'menu:economy')]
-      ])
-    });
-    ctx.answerCbQuery('✅');
-  } catch (error) {
-    console.error('Auction error:', error);
-    ctx.answerCbQuery('❌ خطأ');
-  }
-});
-
-bot.action('eco:my_auctions', async (ctx) => {
-  try {
-    const AuctionManager = require('./economy/auctionManager');
-    const auctions = await AuctionManager.getUserActiveBids(ctx.from.id);
-    const message = AuctionManager.formatUserAuctions(auctions, ctx.from.id);
+    // ...existing code...
 
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
