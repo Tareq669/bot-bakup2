@@ -8,13 +8,17 @@ class GuessNumberGame {
    */
   static async startGame(ctx) {
     try {
+      console.log('🎮 بدء لعبة تخمين:', { userId: ctx.from.id });
+      
       // Initialize session properly
       if (!ctx.session) {
         ctx.session = {};
+        console.log('📝 تم إنشاء session جديد');
       }
 
       // Generate random number 1-100
       const secretNumber = Math.floor(Math.random() * 100) + 1;
+      console.log('🔐 الرقم السري:', secretNumber);
 
       // Store game state
       ctx.session.guessGame = {
@@ -25,6 +29,8 @@ class GuessNumberGame {
         hints: [],
         startTime: Date.now()
       };
+
+      console.log('💾 تم حفظ حالة اللعبة');
 
       const Markup = require('telegraf/markup');
       const message = `
@@ -48,12 +54,13 @@ class GuessNumberGame {
       });
 
       await ctx.answerCbQuery('🎮 اللعبة بدأت! أرسل رقم من 1-100');
+      console.log('✅ تم بدء اللعبة بنجاح');
     } catch (error) {
-      console.error('❌ خطأ في بدء لعبة التخمين:', error);
+      console.error('❌ خطأ في بدء لعبة التخمين:', error.message);
       try {
         await ctx.reply('❌ حدث خطأ في بدء اللعبة');
       } catch (e) {
-        console.error('خطأ في الرد:', e);
+        console.error('خطأ في الرد:', e.message);
       }
     }
   }
@@ -63,17 +70,22 @@ class GuessNumberGame {
    */
   static async processGuess(ctx, userGuess) {
     try {
+      console.log('🎮 معالجة تخمين:', { userId: ctx.from.id, guess: userGuess, hasGame: !!ctx.session?.guessGame });
+
       // Check if game is active
       if (!ctx.session || !ctx.session.guessGame || !ctx.session.guessGame.active) {
-        return ctx.reply('❌ لا توجد لعبة جارية. اختر لعبة جديدة من القائمة');
+        console.log('❌ اللعبة غير نشطة', { hasSession: !!ctx.session, hasGame: !!ctx.session?.guessGame });
+        return await ctx.reply('❌ لا توجد لعبة جارية. اختر لعبة جديدة من القائمة');
       }
 
       const game = ctx.session.guessGame;
       const guess = parseInt(userGuess.trim());
 
+      console.log('📊 إحصائيات:', { guess, secretNumber: game.number, attempts: game.attempts });
+
       // Validate input
       if (isNaN(guess) || guess < 1 || guess > 100) {
-        return ctx.reply('❌ أرسل رقم صحيح من 1 إلى 100 فقط!');
+        return await ctx.reply('❌ أرسل رقم صحيح من 1 إلى 100 فقط!');
       }
 
       // Increment attempts
@@ -81,16 +93,19 @@ class GuessNumberGame {
 
       // Check if correct
       if (guess === game.number) {
-        return this.handleCorrectGuess(ctx, game);
+        console.log('✅ إجابة صحيحة!');
+        return await this.handleCorrectGuess(ctx, game);
       }
 
       // Check if max attempts reached
       if (game.attempts >= game.maxAttempts) {
-        return this.handleGameOver(ctx, game);
+        console.log('❌ انتهت المحاولات');
+        return await this.handleGameOver(ctx, game);
       }
 
       // Give hint
-      return this.sendHint(ctx, game, guess);
+      console.log('💡 إرسال تلميح');
+      return await this.sendHint(ctx, game, guess);
     } catch (error) {
       console.error('❌ خطأ في معالجة التخمين:', error);
       await ctx.reply('❌ حدث خطأ في معالجة إجابتك');
@@ -249,7 +264,11 @@ ${hint}${proximity}
    * التحقق من حالة اللعبة
    */
   static isGameActive(ctx) {
-    return ctx.session && ctx.session.guessGame && ctx.session.guessGame.active;
+    const isActive = ctx.session && ctx.session.guessGame && ctx.session.guessGame.active;
+    if (isActive) {
+      console.log('✅ اللعبة نشطة:', { userId: ctx.from?.id, attempts: ctx.session.guessGame.attempts });
+    }
+    return isActive;
   }
 }
 

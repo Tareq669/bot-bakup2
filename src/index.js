@@ -2075,9 +2075,12 @@ bot.on('text', async (ctx) => {
     // ⭐ CHECK GUESS GAME INPUT FIRST (before all other handlers)
     const GuessNumberGame = require('./games/guessNumberGame');
     if (GuessNumberGame.isGameActive(ctx)) {
+      console.log('🎮 اللعبة نشطة - معالجة التخمين');
       await GuessNumberGame.processGuess(ctx, message);
       return;
     }
+
+    console.log('📝 نص عادي:', message.substring(0, 30));
 
     // Handle feature awaiting input
     if (ctx.session && ctx.session.featureAwait) {
