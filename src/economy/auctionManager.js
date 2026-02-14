@@ -60,6 +60,10 @@ class AuctionManager {
     return `${hours} ساعة و${minutes} دقيقة`;
   }
 
+  static formatEndAt(endAt) {
+    return endAt.toLocaleString('ar');
+  }
+
   static async createAuction(item, bot) {
     const endAt = new Date(Date.now() + AUCTION_DURATION_MS);
     const auction = await Auction.create({
@@ -92,7 +96,7 @@ class AuctionManager {
         await this.finalizeAuction(active, bot);
       }
 
-      const stillActive = await Auction.findOne({ itemId: item.id, status: 'active' });
+      const stillActive = await Auction.findOne({ itemId: slot, status: 'active' });
       if (!stillActive) {
         const picked = this.pickItem(activeNames);
         activeNames.push(picked.name);
@@ -156,6 +160,24 @@ class AuctionManager {
       `✅ <b>انتهى المزاد</b>\n\n🏷️ العنصر: ${auction.itemName}\n` +
         `🏆 الفائز: ${winnerName}\n💰 السعر النهائي: ${winnerAmount} عملة`
     );
+
+    if (bot) {
+      const loserIds = [...new Set(auction.bids.map((bid) => bid.userId))].filter(
+        (id) => id !== winnerId
+      );
+      for (const loserId of loserIds) {
+        await bot.telegram
+          .sendMessage(
+            loserId,
+            `❌ <b>انتهى المزاد</b>\n\n` +
+              `🏷️ العنصر: ${auction.itemName}\n` +
+              `🏆 الفائز: ${winnerName}\n` +
+              `💰 السعر النهائي: ${winnerAmount} عملة`,
+            { parse_mode: 'HTML' }
+          )
+          .catch(() => {});
+      }
+    }
   }
 
   static async getActiveAuctions(bot) {
@@ -196,10 +218,13 @@ class AuctionManager {
       return { ok: false, message: '❌ رصيدك غير كافٍ لهذه المزايدة.' };
     }
 
-    if (auction.highestBid?.userId) {
+    const previousBidderId = auction.highestBid?.userId;
+    const previousBidAmount = auction.highestBid?.amount;
+
+    if (previousBidderId) {
       await EconomyManager.addCoins(
-        auction.highestBid.userId,
-        auction.highestBid.amount,
+        previousBidderId,
+        previousBidAmount,
         `استرداد مزايدة على ${auction.itemName}`
       ).catch(() => {});
     }
@@ -218,6 +243,19 @@ class AuctionManager {
         `👤 ${bidderName}\n🏷️ ${auction.itemName}\n💰 ${amount} عملة`
     );
 
+    if (bot && previousBidderId && previousBidderId !== userId) {
+      await bot.telegram
+        .sendMessage(
+          previousBidderId,
+          `⚠️ <b>تم تجاوزك في المزاد</b>\n\n` +
+            `🏷️ العنصر: ${auction.itemName}\n` +
+            `💰 المزايدة الجديدة: ${amount} عملة\n` +
+            `⏳ الوقت المتبقي: ${this.formatTimeLeft(auction.endAt)}`,
+          { parse_mode: 'HTML' }
+        )
+        .catch(() => {});
+    }
+
     return {
       ok: true,
       message:
@@ -232,7 +270,8 @@ class AuctionManager {
     const lines = auctions.map((auction) => {
       const currentBid = auction.highestBid?.amount || auction.basePrice;
       const timeLeft = this.formatTimeLeft(auction.endAt);
-      return `${auction.itemId}. ${auction.itemName} - ${currentBid} عملة (⏳ ${timeLeft})`;
+      const endAt = this.formatEndAt(auction.endAt);
+      return `${auction.itemId}. ${auction.itemName} - ${currentBid} عملة (⏳ ${timeLeft})\n⏰ ينتهي: ${endAt}`;
     });
 
     return (
@@ -240,6 +279,32 @@ class AuctionManager {
       `${lines.join('\n')}\n\n` +
       `💰 أرسل رقم العنصر للمزايدة أو اكتب (إلغاء)`
     );
+  }
+
+  static async getUserActiveBids(userId) {
+    return Auction.find({ status: 'active', 'bids.userId': userId }).sort({ itemId: 1 });
+  }
+
+  static formatUserAuctions(auctions, userId) {
+    if (!auctions.length) {
+      return '📭 <b>مزاداتك</b>\n\nلا توجد مزايدات نشطة لك حالياً.';
+    }
+
+    const lines = auctions.map((auction) => {
+      const userBids = auction.bids.filter((bid) => bid.userId === userId);
+      const lastBid = userBids[userBids.length - 1];
+      const currentBid = auction.highestBid?.amount || auction.basePrice;
+      const status = auction.highestBid?.userId === userId ? '✅ أنت الأعلى' : '⚠️ تم تجاوزك';
+      return (
+        `• ${auction.itemName}\n` +
+        `  مزايدتك: ${lastBid?.amount || 0} عملة\n` +
+        `  الأعلى الآن: ${currentBid} عملة\n` +
+        `  ${status}\n` +
+        `  ⏳ المتبقي: ${this.formatTimeLeft(auction.endAt)}`
+      );
+    });
+
+    return '📌 <b>مزاداتك</b>\n\n' + lines.join('\n\n');
   }
 
   static async sendTimeLeftNotifications(bot) {

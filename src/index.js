@@ -1306,11 +1306,33 @@ bot.action('eco:auction', async (ctx) => {
 
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
-      reply_markup: Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'menu:economy')]])
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('📌 مزاداتي', 'eco:my_auctions')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:economy')]
+      ])
     });
     ctx.answerCbQuery('✅');
   } catch (error) {
     console.error('Auction error:', error);
+    ctx.answerCbQuery('❌ خطأ');
+  }
+});
+
+bot.action('eco:my_auctions', async (ctx) => {
+  try {
+    const AuctionManager = require('./economy/auctionManager');
+    const auctions = await AuctionManager.getUserActiveBids(ctx.from.id);
+    const message = AuctionManager.formatUserAuctions(auctions, ctx.from.id);
+
+    await ctx.editMessageText(message, {
+      parse_mode: 'HTML',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('⬅️ رجوع', 'eco:auction')]
+      ])
+    });
+    ctx.answerCbQuery('✅');
+  } catch (error) {
+    console.error('My auctions error:', error);
     ctx.answerCbQuery('❌ خطأ');
   }
 });
