@@ -1191,6 +1191,10 @@ bot.action(/game:rps:(rock|paper|scissors)/, (ctx) => {
 });
 
 bot.action('game:guess', (ctx) => GameHandler.handleGuess(ctx));
+bot.action('guess:cancel', async (ctx) => {
+  const GuessNumberGame = require('./games/guessNumberGame');
+  await GuessNumberGame.cancelGame(ctx);
+});
 bot.action('game:quiz', (ctx) => GameHandler.handleQuiz(ctx));
 bot.action(/game:quiz:(.+)/, (ctx) => {
   const answer = ctx.match[1];
@@ -2068,31 +2072,10 @@ bot.on('text', async (ctx) => {
   try {
     const message = ctx.message.text;
 
-    // ⭐ CHECK GAME INPUT FIRST (before all other handlers)
-    if (ctx.session && ctx.session.gameState && ctx.session.gameState.game === 'guess') {
-      const guess = parseInt(message);
-      const number = ctx.session.gameState.number;
-
-      if (isNaN(guess)) {
-        return ctx.reply('❌ رقم صحيح من فضلك');
-      }
-
-      ctx.session.gameState.attempts++;
-
-      if (guess === number) {
-        ctx.reply(`🎉 صحيح! ${number}\n✅ 200 عملة!`);
-        EconomyManager.addCoins(ctx.from.id, 200, 'لعبة تخمين');
-        ctx.session.gameState = null;
-      } else if (guess < number) {
-        ctx.reply(`⬆️ أكبر من ${guess}`);
-      } else {
-        ctx.reply(`⬇️ أقل من ${guess}`);
-      }
-
-      if (ctx.session.gameState && ctx.session.gameState.attempts > 10) {
-        ctx.reply(`❌ انتهت المحاولات! ${number}`);
-        ctx.session.gameState = null;
-      }
+    // ⭐ CHECK GUESS GAME INPUT FIRST (before all other handlers)
+    const GuessNumberGame = require('./games/guessNumberGame');
+    if (GuessNumberGame.isGameActive(ctx)) {
+      await GuessNumberGame.processGuess(ctx, message);
       return;
     }
 

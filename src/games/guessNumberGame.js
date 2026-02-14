@@ -1,0 +1,256 @@
+/**
+ * نظام لعبة تخمين الرقم - محسّن ومختبر
+ */
+
+class GuessNumberGame {
+  /**
+   * بدء لعبة تخمين الرقم
+   */
+  static async startGame(ctx) {
+    try {
+      // Initialize session properly
+      if (!ctx.session) {
+        ctx.session = {};
+      }
+
+      // Generate random number 1-100
+      const secretNumber = Math.floor(Math.random() * 100) + 1;
+
+      // Store game state
+      ctx.session.guessGame = {
+        active: true,
+        number: secretNumber,
+        attempts: 0,
+        maxAttempts: 10,
+        hints: [],
+        startTime: Date.now()
+      };
+
+      const Markup = require('telegraf/markup');
+      const message = `
+🔢 <b>لعبة تخمين الرقم</b>
+
+أنا فكرت في رقم من <b>1</b> إلى <b>100</b>
+لديك <b>10 محاولات</b> لتخمينه! 
+
+💡 <b>الأرقام الصحيحة:</b> من 1 إلى 100 فقط
+
+🎮 أرسل رقمك الآن!
+      `;
+
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('❌ إلغاء اللعبة', 'guess:cancel')]
+      ]);
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+
+      await ctx.answerCbQuery('🎮 اللعبة بدأت! أرسل رقم من 1-100');
+    } catch (error) {
+      console.error('❌ خطأ في بدء لعبة التخمين:', error);
+      try {
+        await ctx.reply('❌ حدث خطأ في بدء اللعبة');
+      } catch (e) {
+        console.error('خطأ في الرد:', e);
+      }
+    }
+  }
+
+  /**
+   * معالجة تخمين المستخدم
+   */
+  static async processGuess(ctx, userGuess) {
+    try {
+      // Check if game is active
+      if (!ctx.session || !ctx.session.guessGame || !ctx.session.guessGame.active) {
+        return ctx.reply('❌ لا توجد لعبة جارية. اختر لعبة جديدة من القائمة');
+      }
+
+      const game = ctx.session.guessGame;
+      const guess = parseInt(userGuess.trim());
+
+      // Validate input
+      if (isNaN(guess) || guess < 1 || guess > 100) {
+        return ctx.reply('❌ أرسل رقم صحيح من 1 إلى 100 فقط!');
+      }
+
+      // Increment attempts
+      game.attempts++;
+
+      // Check if correct
+      if (guess === game.number) {
+        return this.handleCorrectGuess(ctx, game);
+      }
+
+      // Check if max attempts reached
+      if (game.attempts >= game.maxAttempts) {
+        return this.handleGameOver(ctx, game);
+      }
+
+      // Give hint
+      return this.sendHint(ctx, game, guess);
+    } catch (error) {
+      console.error('❌ خطأ في معالجة التخمين:', error);
+      await ctx.reply('❌ حدث خطأ في معالجة إجابتك');
+    }
+  }
+
+  /**
+   * معالجة الإجابة الصحيحة
+   */
+  static async handleCorrectGuess(ctx, game) {
+    try {
+      const EconomyManager = require('../economy/economyManager');
+      
+      // Calculate reward based on attempts
+      let reward = 200;
+      if (game.attempts <= 3) reward = 500; // Bonus for quick guess
+      else if (game.attempts <= 5) reward = 300;
+
+      // Add coins
+      await EconomyManager.addCoins(ctx.from.id, reward, 'فوز في لعبة التخمين');
+
+      const message = `
+🎉 <b>مبروك! انت محق!</b>
+
+✅ الرقم الصحيح: <code>${game.number}</code>
+📊 عدد المحاولات: <b>${game.attempts}</b>
+💰 الجائزة: <b>+${reward} عملة</b>
+
+⏱️ الوقت المستغرق: ${Math.round((Date.now() - game.startTime) / 1000)} ثانية
+      `;
+
+      const Markup = require('telegraf/markup');
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🔄 لعبة جديدة', 'game:guess')],
+        [Markup.button.callback('⬅️ رجوع للألعاب', 'menu:games')]
+      ]);
+
+      // Clear game state
+      ctx.session.guessGame = null;
+
+      await ctx.reply(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (error) {
+      console.error('❌ خطأ في معالجة الإجابة الصحيحة:', error);
+      ctx.session.guessGame = null;
+      await ctx.reply('❌ حدث خطأ');
+    }
+  }
+
+  /**
+   * معالجة انتهاء اللعبة
+   */
+  static async handleGameOver(ctx, game) {
+    try {
+      const message = `
+❌ <b>انتهت محاولاتك!</b>
+
+🔍 الرقم الصحيح كان: <code>${game.number}</code>
+📊 عدد محاولاتك: <b>${game.attempts}</b>
+
+💡 حاول مرة أخرى!
+      `;
+
+      const Markup = require('telegraf/markup');
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🔄 لعبة جديدة', 'game:guess')],
+        [Markup.button.callback('⬅️ رجوع للألعاب', 'menu:games')]
+      ]);
+
+      // Clear game state
+      ctx.session.guessGame = null;
+
+      await ctx.reply(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (error) {
+      console.error('❌ خطأ في معالجة نهاية اللعبة:', error);
+      ctx.session.guessGame = null;
+      await ctx.reply('❌ حدث خطأ');
+    }
+  }
+
+  /**
+   * إرسال تلميح للمستخدم
+   */
+  static async sendHint(ctx, game, guess) {
+    try {
+      let hint = '';
+      
+      if (guess < game.number) {
+        hint = `⬆️ الرقم أكبر من ${guess}`;
+      } else {
+        hint = `⬇️ الرقم أقل من ${guess}`;
+      }
+
+      // Calculate distance for better hint
+      const distance = Math.abs(game.number - guess);
+      let proximity = '';
+      
+      if (distance <= 5) {
+        proximity = ' 🔥 قريب جداً!';
+      } else if (distance <= 15) {
+        proximity = ' 🌡️ قريب نوعاً ما';
+      } else if (distance <= 30) {
+        proximity = ' ❄️ بعيد';
+      } else {
+        proximity = ' 🧊 بعيد جداً';
+      }
+
+      const message = `
+${hint}${proximity}
+
+📊 المحاولات المتبقية: <b>${game.maxAttempts - game.attempts}</b>/${game.maxAttempts}
+
+🔢 حاول رقم آخر:
+      `;
+
+      await ctx.reply(message, {
+        parse_mode: 'HTML'
+      });
+    } catch (error) {
+      console.error('❌ خطأ في إرسال التلميح:', error);
+      await ctx.reply('❌ حدث خطأ');
+    }
+  }
+
+  /**
+   * إلغاء اللعبة
+   */
+  static async cancelGame(ctx) {
+    try {
+      ctx.session.guessGame = null;
+
+      const message = '❌ تم إلغاء اللعبة\n\n👋 شكراً للعب!';
+
+      const Markup = require('telegraf/markup');
+      const buttons = Markup.inlineKeyboard([
+        [Markup.button.callback('🎮 ألعاب أخرى', 'menu:games')]
+      ]);
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: buttons.reply_markup
+      });
+    } catch (error) {
+      console.error('❌ خطأ في إلغاء اللعبة:', error);
+      ctx.session.guessGame = null;
+      await ctx.reply('✅ تم إلغاء اللعبة');
+    }
+  }
+
+  /**
+   * التحقق من حالة اللعبة
+   */
+  static isGameActive(ctx) {
+    return ctx.session && ctx.session.guessGame && ctx.session.guessGame.active;
+  }
+}
+
+module.exports = GuessNumberGame;
