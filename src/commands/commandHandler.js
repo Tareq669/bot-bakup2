@@ -129,7 +129,10 @@ class CommandHandler {
   static async handleOwnerStats(ctx) {
     try {
       if (!UIManager.isOwner(ctx.from.id)) {
-        return ctx.answerCbQuery('❌ غير مصرح');
+        if (ctx.callbackQuery) {
+          await ctx.answerCbQuery('❌ غير مصرح');
+        }
+        return ctx.reply('❌ ليس لديك صلاحية');
       }
 
       const totalUsers = await User.countDocuments();
@@ -236,7 +239,9 @@ class CommandHandler {
       ctx.session = ctx.session || {};
       ctx.session.ownerAwait = { type: 'broadcast' };
 
-      await ctx.answerCbQuery('✅ جاهز');
+      if (ctx.callbackQuery) {
+        await ctx.answerCbQuery('✅ جاهز');
+      }
       await ctx.reply(
         '📢 <b>بث رسالة لجميع المستخدمين</b>\n\n' +
         'اكتب الرسالة التي تريد إرسالها:\n\n' +
@@ -420,7 +425,11 @@ class CommandHandler {
       );
     } catch (error) {
       console.error('Error in handleOwnerGiveCoins:', error);
-      ctx.answerCbQuery('❌ حدث خطأ');
+      if (ctx.callbackQuery) {
+        ctx.answerCbQuery('❌ حدث خطأ');
+      } else {
+        ctx.reply('❌ حدث خطأ');
+      }
     }
   }
 
