@@ -8,6 +8,7 @@ const MenuHandler = require('./commands/menuHandler');
 const GameHandler = require('./commands/gameHandler');
 const QuranicGamesHandler = require('./commands/quranicGamesHandler');
 const EconomyHandler = require('./commands/economyHandler');
+const EconomyManager = require('./economy/economyManager');
 const ContentHandler = require('./commands/contentHandler');
 const ProfileHandler = require('./commands/profileHandler');
 const { logger } = require('./utils/helpers');
@@ -757,9 +758,260 @@ bot.action('new:notifications', async (ctx) => {
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 });
-bot.action(/notify:(adhkar|prayer|games|rewards|events|auction|stats)/, async (_ctx) => {
-//
-// ...existing code before notification handler...
+
+bot.action(/notify:(adhkar|prayer|games|rewards|events|auction|stats)/, async (ctx) => {
+  const type = ctx.match[1];
+  const { User } = require('./database/models');
+
+  let message = '';
+  if (type !== 'stats') {
+    const user = await User.findOne({ userId: ctx.from.id });
+    if (!user) {
+      await ctx.answerCbQuery('❌');
+      return ctx.reply('❌ لم يتم العثور على ملفك');
+    }
+
+    user.notifications = user.notifications || { enabled: true };
+
+    const fieldMap = {
+      adhkar: 'adhkarReminder',
+      prayer: 'prayerReminder',
+      games: 'gameUpdates',
+      rewards: 'rewardUpdates',
+      events: 'eventReminder',
+      auction: 'auctionUpdates'
+    };
+
+    const field = fieldMap[type];
+    user.notifications[field] = !user.notifications[field];
+    await user.save();
+
+    const state = user.notifications[field] ? '✅ تم التفعيل' : '❌ تم التعطيل';
+    const titleMap = {
+      adhkar: '🕌 إشعارات الأذكار',
+      prayer: '⏰ إشعارات الصلاة',
+      games: '🎮 إشعارات الألعاب',
+      rewards: '💰 إشعارات المكافآت',
+      events: '🔔 إشعارات الأحداث',
+      auction: '🏷️ إشعارات المزاد'
+    };
+
+    message = `${titleMap[type]}\n${state}`;
+    await ctx.reply(message, { parse_mode: 'HTML' });
+    return ctx.answerCbQuery('✅ تم');
+  }
+
+  switch (type) {
+    case 'adhkar':
+    const { User } = require('./database/models');
+    const user = await User.findOne({ userId: ctx.from.id });
+    if (!user) {
+      await ctx.answerCbQuery('❌');
+      return ctx.reply('❌ لم يتم العثور على ملفك');
+    }
+    user.notifications = user.notifications || { enabled: true };
+    const fieldMap = {
+      adhkar: 'adhkarReminder',
+      prayer: 'prayerReminder',
+      games: 'gameUpdates',
+      rewards: 'rewardUpdates',
+      events: 'eventReminder',
+      auction: 'auctionUpdates'
+    };
+    const field = fieldMap[type];
+    const titleMap = {
+      adhkar: '🕌 إشعارات الأذكار',
+      prayer: '⏰ إشعارات الصلاة',
+      games: '🎮 إشعارات الألعاب',
+      rewards: '💰 إشعارات المكافآت',
+      events: '🔔 إشعارات الأحداث',
+      auction: '🏷️ إشعارات المزاد',
+      stats: '📊 إحصائياتي'
+    };
+    if (type === 'stats') {
+      const userStats = await require('./database/db').User.findById(ctx.from.id);
+      const statsMessage =
+        '📊 <b>إحصائياتك</b>\n\n' +
+        `💰 عملات: ${userStats.coins}\n` +
+        `⭐ نقاط: ${userStats.xp}\n` +
+        `🎮 الألعاب المكملة: ${userStats.gamesPlayed}\n` +
+        `📖 القرآن المقروء: ${userStats.quranPages} صفحة`;
+      await ctx.reply(statsMessage, { parse_mode: 'HTML' });
+      return ctx.answerCbQuery('✅ تم');
+    }
+    // Show enable/disable menu for this notification
+    const enabled = !!user.notifications[field];
+    const state = enabled ? '✅ مفعّل' : '❌ معطّل';
+    const notifyMessage = `${titleMap[type]}\n\nالحالة الحالية: ${state}\n\nيمكنك تفعيل أو تعطيل الإشعارات لهذا القسم فقط.`;
+    const keyboard = require('./ui/keyboards').notificationToggleKeyboard(type, enabled);
+    await ctx.editMessageText(notifyMessage, { parse_mode: 'HTML', reply_markup: keyboard.reply_markup });
+    await ctx.answerCbQuery('');
+  }
+
+}
+// --- NEW CACHE ACTIONS ---
+bot.action('new:cache', async (ctx) => {
+  const UIManager = require('./ui/keyboards');
+  const keyboard = UIManager.cacheSystemKeyboard();
+  await ctx.editMessageText(
+    '⚡ <b>نظام التخزين المؤقت</b>\n\n' +
+      '📊 <b>إحصائيات</b> - معلومات الذاكرة\n' +
+      '🧹 <b>مسح</b> - تفريغ الذاكرة\n' +
+      '⚡ <b>الأداء</b> - حالة الأداء\n\n' +
+      '⚙️ يحسّن سرعة البوت معاً',
+    { parse_mode: 'HTML', reply_markup: keyboard }
+  );
+});
+
+bot.action('cache:stats', async (ctx) => {
+  const cache = global.cache;
+  const stats = cache.getStats();
+  const message =
+    '📊 <b>إحصائيات الذاكرة</b>\n\n' +
+    `💾 العناصر: ${stats.keys}\n` +
+    `✅ النجاحات: ${stats.hits}\n` +
+    `❌ الفشل: ${stats.misses}\n` +
+    `📈 معدل النجاح: ${((stats.hits / (stats.hits + stats.misses)) * 100).toFixed(2)}%`;
+  const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'new:cache')]]);
+  await ctx.reply(message, { parse_mode: 'HTML', reply_markup: keyboard });
+});
+
+bot.action('cache:clear', async (ctx) => {
+  await ctx.answerCbQuery('🧹 جاري المسح...');
+  const cache = global.cache;
+  cache.flushAll();
+  await ctx.reply('✅ تم مسح الذاكرة بنجاح', { parse_mode: 'HTML' });
+});
+
+// --- NEW RATE LIMITER ACTIONS ---
+bot.action('new:ratelimiter', async (ctx) => {
+  const UIManager = require('./ui/keyboards');
+  const keyboard = UIManager.rateLimiterKeyboard();
+  await ctx.editMessageText(
+    '🛡️ <b>نظام الحماية من الإساءة</b>\n\n' +
+      '⚠️ <b>الحد من الرسائل</b> - 10 رسائل/دقيقة\n' +
+      '⚠️ <b>الحد من الأوامر</b> - 20 أمر/دقيقة\n' +
+      '⚠️ <b>الحد من الألعاب</b> - 5 ألعاب/5 دقائق\n\n' +
+      '🔒 حماية عالية ضد الإساءة والبوتات المزعجة',
+    { parse_mode: 'HTML', reply_markup: keyboard }
+  );
+});
+
+bot.action('ratelimit:status', async (ctx) => {
+  const rateLimiter = global.rateLimiter;
+  const status = rateLimiter.getUserStatus(ctx.from.id);
+  const message =
+    '📊 <b>حالة حسابك</b>\n\n' +
+    `الرسائل: ${status.messages.count}/${status.messages.limit}\n` +
+    `الأوامر: ${status.commands.count}/${status.commands.limit}\n` +
+    `الألعاب: ${status.games.count}/${status.games.limit}\n\n` +
+    `${status.blocked ? '🚫 <b>محظور حالياً</b>' : '✅ <b>آمن</b>'}`;
+  const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'new:ratelimiter')]]);
+  await ctx.reply(message, { parse_mode: 'HTML', reply_markup: keyboard });
+});
+
+bot.action('ratelimit:info', async (ctx) => {
+  const message =
+    '❓ <b>ما هو نظام الحماية؟</b>\n\n' +
+    '🛡️ يحمي البوت من:\n' +
+    '• البوتات المزعجة\n' +
+    '• الهجمات المكثفة\n' +
+    '• الاستخدام المفرط\n\n' +
+    '⚠️ إذا تجاوزت الحد الأقصى:\n' +
+    '• حظر تلقائي 5 دقائق\n' +
+    '• شطب المحاولات الخاطئة\n\n' +
+    '✅ الاستخدام الطبيعي آمن تماماً';
+  const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'new:ratelimiter')]]);
+  await ctx.reply(message, { parse_mode: 'HTML', reply_markup: keyboard });
+});
+
+// --- ADVANCED FEATURES ACTIONS ---
+bot.action('features:goals', (ctx) => CommandHandler.handleGoals(ctx));
+bot.action('features:charity', (ctx) => CommandHandler.handleCharity(ctx));
+bot.action('features:memorization', (ctx) => CommandHandler.handleMemorization(ctx));
+bot.action('features:dua', (ctx) => CommandHandler.handleDua(ctx));
+bot.action('features:referral', (ctx) => CommandHandler.handleReferral(ctx));
+bot.action('features:events', (ctx) => CommandHandler.handleEvents(ctx));
+bot.action('features:rewards', (ctx) => CommandHandler.handleRewards(ctx));
+bot.action('features:library', (ctx) => CommandHandler.handleLibrary(ctx));
+bot.action('features:teams', (ctx) => CommandHandler.handleTeams(ctx));
+bot.action('features:stats', (ctx) => CommandHandler.handleStats(ctx));
+bot.action('stats:view', (ctx) => CommandHandler.handleStats(ctx));
+
+// --- REFERRAL ACTIONS ---
+bot.action('referral_leaderboard', async (ctx) => {
+  const ReferralSystem = require('./features/referralSystem');
+  const leaderboard = await ReferralSystem.getReferralLeaderboard(10);
+  await ctx.reply(ReferralSystem.formatReferralLeaderboard(leaderboard), { parse_mode: 'HTML' });
+});
+
+bot.action('referral_info', async (ctx) => {
+  const ReferralSystem = require('./features/referralSystem');
+  await ctx.reply(ReferralSystem.getReferralInfo(), { parse_mode: 'HTML' });
+});
+
+// --- EVENTS ACTIONS ---
+bot.action('events_leaderboard', async (ctx) => {
+  const EventsSystem = require('./features/eventsSystem');
+  const events = await EventsSystem.getActiveEvents();
+  if (!events.length) return ctx.reply('❌ لا توجد أحداث نشطة');
+  const leaderboard = await EventsSystem.getEventLeaderboard(events[0]._id, 10);
+  await ctx.reply(EventsSystem.formatEventLeaderboard(events[0], leaderboard), {
+    parse_mode: 'HTML'
+  });
+});
+
+// --- REWARDS ACTIONS ---
+bot.action('reward:daily', async (ctx) => {
+  const RewardsSystem = require('./features/rewardsSystem');
+  const result = await RewardsSystem.claimDailyReward(ctx.from.id);
+  await ctx.answerCbQuery(result.success ? '✅ تم' : '❌');
+  await ctx.reply(result.message, { parse_mode: 'HTML' });
+});
+
+bot.action('rewards:daily', async (ctx) => {
+  const RewardsSystem = require('./features/rewardsSystem');
+  const result = await RewardsSystem.claimDailyReward(ctx.from.id);
+  await ctx.answerCbQuery(result.success ? '✅ تم' : '❌');
+  await ctx.reply(result.message, { parse_mode: 'HTML' });
+});
+
+bot.action('reward:wheel', async (ctx) => {
+  const RewardsSystem = require('./features/rewardsSystem');
+  const result = await RewardsSystem.spinWheel(ctx.from.id);
+  await ctx.answerCbQuery(result.success ? '✅ تم' : '❌');
+  await ctx.reply(result.message, { parse_mode: 'HTML' });
+});
+
+bot.action(/reward:loot:(basic|silver|gold|legendary)/, async (ctx) => {
+  const RewardsSystem = require('./features/rewardsSystem');
+  const boxType = ctx.match[1];
+  const result = await RewardsSystem.openLootBox(ctx.from.id, boxType);
+  await ctx.answerCbQuery(result.success ? '✅ تم' : '❌');
+  await ctx.reply(result.message, { parse_mode: 'HTML' });
+});
+
+// --- GOALS ACTIONS ---
+bot.action('add_goal', async (ctx) => {
+  const keyboard = require('./ui/keyboards').goalsTemplatesKeyboard();
+  await ctx.reply('🎯 اختر قالب هدف جاهز:', {
+    parse_mode: 'HTML',
+    reply_markup: keyboard.reply_markup
+  });
+});
+
+bot.action(/goal:(khatma|adhkar|pages|prayers|games|charity)/, async (ctx) => {
+  const GoalsManager = require('./features/goals');
+  const templates = GoalsManager.getSuggestedGoals();
+  const type = ctx.match[1];
+  const template = templates.find((t) => {
+    if (type === 'pages') return t.type === 'quran_pages';
+    return t.type === type;
+  });
+  if (!template) return ctx.answerCbQuery('❌ قالب غير موجود');
+  const result = await GoalsManager.createGoal(ctx.from.id, template);
+  await ctx.answerCbQuery(result.success ? '✅ تم' : '❌');
+  await ctx.reply(result.message, { parse_mode: 'HTML' });
 });
 
 // --- CHARITY ACTIONS ---
@@ -1104,11 +1356,6 @@ bot.action('eco:transfer', async (ctx) => {
     ctx.session.ecoAwait = { type: 'transfer' };
     await ctx.answerCbQuery('✅ جاهز');
     // ...existing code...
-
-    const message =
-      '💸 <b>تحويل العملات</b>\n\n' +
-      'أدخل معرف المستخدم الذي تريد التحويل له:\n\n' +
-      '<code>@username</code> أو <code>معرّفه الرقمي</code>';
 
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
@@ -1968,6 +2215,7 @@ bot.on('text', async (ctx) => {
     if (ctx.session && ctx.session.ecoAwait) {
       const awaiting = ctx.session.ecoAwait;
       const { User } = require('./database/models');
+      const EconomyManager = require('./economy/economyManager');
 
       try {
         if (awaiting.type === 'auction_select') {
