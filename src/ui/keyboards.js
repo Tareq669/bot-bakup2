@@ -678,6 +678,21 @@ class UIManager {
     ]);
   }
 
+  // Keyboard for toggling a specific notification type
+  static notificationToggleKeyboard(type, enabled) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          enabled ? '❌ تعطيل الإشعارات' : '✅ تفعيل الإشعارات',
+          `toggleNotify:${type}`
+        )
+      ],
+      [
+        Markup.button.callback('⬅️ رجوع', 'new:notifications')
+      ]
+    ]);
+  }
+
   // Backup System Menu
   static backupMenuKeyboard() {
     return Markup.inlineKeyboard([
