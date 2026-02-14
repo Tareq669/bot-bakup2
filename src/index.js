@@ -802,51 +802,57 @@ bot.action(/notify:(adhkar|prayer|games|rewards|events|auction|stats)/, async (c
   }
 
   switch (type) {
-    case 'adhkar':
-    const { User } = require('./database/models');
-    const user = await User.findOne({ userId: ctx.from.id });
-    if (!user) {
-      await ctx.answerCbQuery('❌');
-      return ctx.reply('❌ لم يتم العثور على ملفك');
+    case 'adhkar': {
+      // Move declarations outside case block
+      const userModel = require('./database/models').User;
+      const user = await userModel.findOne({ userId: ctx.from.id });
+      if (!user) {
+        await ctx.answerCbQuery('❌');
+        return ctx.reply('❌ لم يتم العثور على ملفك');
+      }
+      user.notifications = user.notifications || { enabled: true };
+      const fieldMap = {
+        adhkar: 'adhkarReminder',
+        prayer: 'prayerReminder',
+        games: 'gameUpdates',
+        rewards: 'rewardUpdates',
+        events: 'eventReminder',
+        auction: 'auctionUpdates'
+      };
+      const field = fieldMap[type];
+      const titleMap = {
+        adhkar: '🕌 إشعارات الأذكار',
+        prayer: '⏰ إشعارات الصلاة',
+        games: '🎮 إشعارات الألعاب',
+        rewards: '💰 إشعارات المكافآت',
+        events: '🔔 إشعارات الأحداث',
+        auction: '🏷️ إشعارات المزاد',
+        stats: '📊 إحصائياتي'
+      };
+      if (type === 'stats') {
+        const userStats = await require('./database/db').User.findById(ctx.from.id);
+        const statsMessage =
+          '📊 <b>إحصائياتك</b>\n\n' +
+          `💰 عملات: ${userStats.coins}\n` +
+          `⭐ نقاط: ${userStats.xp}\n` +
+          `🎮 الألعاب المكملة: ${userStats.gamesPlayed}\n` +
+          `📖 القرآن المقروء: ${userStats.quranPages} صفحة`;
+        await ctx.reply(statsMessage, { parse_mode: 'HTML' });
+        return ctx.answerCbQuery('✅ تم');
+      }
+      // Show enable/disable menu for this notification
+      const enabled = !!user.notifications[field];
+      const state = enabled ? '✅ مفعّل' : '❌ معطّل';
+      const notifyMessage = `${titleMap[type]}\n\nالحالة الحالية: ${state}\n\nيمكنك تفعيل أو تعطيل الإشعارات لهذا القسم فقط.`;
+      const keyboard = require('./ui/keyboards').notificationToggleKeyboard(type, enabled);
+      await ctx.editMessageText(notifyMessage, { parse_mode: 'HTML', reply_markup: keyboard.reply_markup });
+      await ctx.answerCbQuery('');
+      break;
     }
-    user.notifications = user.notifications || { enabled: true };
-    const fieldMap = {
-      adhkar: 'adhkarReminder',
-      prayer: 'prayerReminder',
-      games: 'gameUpdates',
-      rewards: 'rewardUpdates',
-      events: 'eventReminder',
-      auction: 'auctionUpdates'
-    };
-    const field = fieldMap[type];
-    const titleMap = {
-      adhkar: '🕌 إشعارات الأذكار',
-      prayer: '⏰ إشعارات الصلاة',
-      games: '🎮 إشعارات الألعاب',
-      rewards: '💰 إشعارات المكافآت',
-      events: '🔔 إشعارات الأحداث',
-      auction: '🏷️ إشعارات المزاد',
-      stats: '📊 إحصائياتي'
-    };
-    if (type === 'stats') {
-      const userStats = await require('./database/db').User.findById(ctx.from.id);
-      const statsMessage =
-        '📊 <b>إحصائياتك</b>\n\n' +
-        `💰 عملات: ${userStats.coins}\n` +
-        `⭐ نقاط: ${userStats.xp}\n` +
-        `🎮 الألعاب المكملة: ${userStats.gamesPlayed}\n` +
-        `📖 القرآن المقروء: ${userStats.quranPages} صفحة`;
-      await ctx.reply(statsMessage, { parse_mode: 'HTML' });
-      return ctx.answerCbQuery('✅ تم');
-    }
-    // Show enable/disable menu for this notification
-    const enabled = !!user.notifications[field];
-    const state = enabled ? '✅ مفعّل' : '❌ معطّل';
-    const notifyMessage = `${titleMap[type]}\n\nالحالة الحالية: ${state}\n\nيمكنك تفعيل أو تعطيل الإشعارات لهذا القسم فقط.`;
-    const keyboard = require('./ui/keyboards').notificationToggleKeyboard(type, enabled);
-    await ctx.editMessageText(notifyMessage, { parse_mode: 'HTML', reply_markup: keyboard.reply_markup });
-    await ctx.answerCbQuery('');
+    // ...other cases if needed...
   }
+});
+
 // --- NEW CACHE ACTIONS ---
 bot.action('new:cache', async (ctx) => {
   const UIManager = require('./ui/keyboards');
@@ -1355,6 +1361,7 @@ bot.action('eco:transfer', async (ctx) => {
     await ctx.answerCbQuery('✅ جاهز');
     // ...existing code...
 
+    const message = '💸 <b>تحويل العملات</b>\n\nاختر المستخدم أو أدخل المبلغ للتحويل.';
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
       reply_markup: Markup.inlineKeyboard([
@@ -1516,14 +1523,16 @@ bot.action('achievements:view', async (ctx) => {
       const formatted = SmartNotifications.formatAchievements(achievements);
       message += formatted;
     } else {
-      message += '📊 لا توجد إنجازات جديدة حالياً\n';
+      message += '📊 لا توجد إنجازات جديدة حالياً';
       message += '💪 استمر في اللعب والقراءة لفتح إنجازات جديدة!';
     }
 
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [[{ text: '⬅️ رجوع', callback_data: 'stats:view' }]]
+        inline_keyboard: [
+          [{ text: '⬅️ رجوع', callback_data: 'stats:view' }]
+        ]
       }
     });
   } catch (error) {
@@ -3085,3 +3094,5 @@ app.listen(PORT, () => {
 startBot();
 
 module.exports = bot;
+// END OF FILE FIX: Add missing closing bracket
+
