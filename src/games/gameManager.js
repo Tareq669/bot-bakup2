@@ -320,7 +320,6 @@ ${Formatter.formatGameResult('أنت', result, prize)}
         options: ['عمر', 'عثمان', 'علي', 'أبو بكر'],
         answer: 'أبو بكر'
       }
-      }
     ];
   }
 }
