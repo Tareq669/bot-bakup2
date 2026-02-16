@@ -201,18 +201,8 @@ bot.command('transfer', async (ctx) => {
 // Notifications Management
 bot.command('notifications', async (ctx) => {
   try {
-    const UIManager = require('./ui/keyboards');
-    const keyboard = UIManager.notificationsMenuKeyboard();
-    const message =
-      '🔔 <b>الإشعارات الذكية</b>\n\n' +
-      '🕌 <b>إشعارات الأذكار</b> - تنبيهات يومية\n' +
-      '⏰ <b>إشعارات الصلاة</b> - مواقيت الصلاة\n' +
-      '🎮 <b>إشعارات الألعاب</b> - تذكير بالألعاب\n' +
-      '💰 <b>إشعارات المكافآت</b> - عروض خاصة\n' +
-      '🔔 <b>إشعارات الأحداث</b> - أحداث جديدة\n' +
-      '🏷️ <b>إشعارات المزاد</b> - مزادات وتنبيهات\n\n' +
-      '⚙️ اختر الإشعارات التي تريدها';
-    ctx.reply(message, { parse_mode: 'HTML', reply_markup: keyboard });
+    const msg4 = `🔔 <b>إدارة الإشعارات</b>\n\n${ctx.message.from.first_name}\n\nاستخدم الخيارات التالية:\n✅ تفعيل\n❌ تعطيل\n\n/notif on|off`;
+    ctx.reply(msg4, { parse_mode: 'HTML' });
   } catch (error) {
     ctx.reply('❌ خدمة الإشعارات غير متاحة');
   }
@@ -229,19 +219,19 @@ bot.command('notif', async (ctx) => {
 
     user.notifications = user.notifications || { enabled: true };
 
-    if (action === 'on' || action === '1') {
+    if (action === 'on') {
       user.notifications.enabled = true;
       await user.save();
       return ctx.reply('✅ تم تفعيل الإشعارات');
     }
 
-    if (action === 'off' || action === '2') {
+    if (action === 'off') {
       user.notifications.enabled = false;
       await user.save();
       return ctx.reply('❌ تم تعطيل الإشعارات');
     }
 
-    return ctx.reply('استخدم: /notif 1 للتفعيل أو /notif 2 للتعطيل');
+    return ctx.reply('استخدم: /notif on|off');
   } catch (error) {
     ctx.reply('❌ حدث خطأ في تحديث الإشعارات');
   }
@@ -752,8 +742,7 @@ bot.action('new:notifications', async (ctx) => {
       '⏰ <b>إشعارات الصلaة</b> - مواقيت الصلاة\n' +
       '🎮 <b>إشعارات الألعاب</b> - تذكر بالألعاب\n' +
       '💰 <b>إشعارات المكافآت</b> - عروض خاصة\n' +
-      '🔔 <b>إشعارات الأحداث</b> - أحداث جديدة\n' +
-      '🏷️ <b>إشعارات المزاد</b> - مزادات وتنبيهات\n\n' +
+      '🔔 <b>إشعارات الأحداث</b> - أحداث جديدة\n\n' +
       '⚙️ اختر الإشعارات التي تريدها',
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
@@ -802,55 +791,69 @@ bot.action(/notify:(adhkar|prayer|games|rewards|events|auction|stats)/, async (c
   }
 
   switch (type) {
-    case 'adhkar': {
-      // Move declarations outside case block
-      const userModel = require('./database/models').User;
-      const user = await userModel.findOne({ userId: ctx.from.id });
-      if (!user) {
-        await ctx.answerCbQuery('❌');
-        return ctx.reply('❌ لم يتم العثور على ملفك');
-      }
-      user.notifications = user.notifications || { enabled: true };
-      const fieldMap = {
-        adhkar: 'adhkarReminder',
-        prayer: 'prayerReminder',
-        games: 'gameUpdates',
-        rewards: 'rewardUpdates',
-        events: 'eventReminder',
-        auction: 'auctionUpdates'
-      };
-      const field = fieldMap[type];
-      const titleMap = {
-        adhkar: '🕌 إشعارات الأذكار',
-        prayer: '⏰ إشعارات الصلاة',
-        games: '🎮 إشعارات الألعاب',
-        rewards: '💰 إشعارات المكافآت',
-        events: '🔔 إشعارات الأحداث',
-        auction: '🏷️ إشعارات المزاد',
-        stats: '📊 إحصائياتي'
-      };
-      if (type === 'stats') {
-        const userStats = await require('./database/db').User.findById(ctx.from.id);
-        const statsMessage =
-          '📊 <b>إحصائياتك</b>\n\n' +
-          `💰 عملات: ${userStats.coins}\n` +
-          `⭐ نقاط: ${userStats.xp}\n` +
-          `🎮 الألعاب المكملة: ${userStats.gamesPlayed}\n` +
-          `📖 القرآن المقروء: ${userStats.quranPages} صفحة`;
-        await ctx.reply(statsMessage, { parse_mode: 'HTML' });
-        return ctx.answerCbQuery('✅ تم');
-      }
-      // Show enable/disable menu for this notification
-      const enabled = !!user.notifications[field];
-      const state = enabled ? '✅ مفعّل' : '❌ معطّل';
-      const notifyMessage = `${titleMap[type]}\n\nالحالة الحالية: ${state}\n\nيمكنك تفعيل أو تعطيل الإشعارات لهذا القسم فقط.`;
-      const keyboard = require('./ui/keyboards').notificationToggleKeyboard(type, enabled);
-      await ctx.editMessageText(notifyMessage, { parse_mode: 'HTML', reply_markup: keyboard.reply_markup });
-      await ctx.answerCbQuery('');
+    case 'adhkar':
+      message = '🕌 إشعارات الأذكار مفعلة\n✅ ستتلقى تنبيهات يومية بالأذكار';
+      break;
+    case 'prayer':
+      message = '⏰ إشعارات الصلاة\n✅ ستتلقى مواقيت الصلاة';
+      break;
+    case 'games':
+      message = '🎮 إشعارات الألعاب\n✅ سيتم تنبيهك بالألعاب الجديدة';
+      break;
+    case 'rewards':
+      message = '💰 إشعارات المكافآت\n✅ ستتلقى عروض حصرية';
+      break;
+    case 'events':
+      message = '🔔 إشعارات الأحداث\n✅ ستتلقى تنبيهات الأحداث';
+      break;
+    case 'stats': {
+      const userStats = await require('./database/db').User.findById(ctx.from.id);
+      message =
+        '📊 <b>إحصائياتك</b>\n\n' +
+        `💰 عملات: ${userStats.coins}\n` +
+        `⭐ نقاط: ${userStats.xp}\n` +
+        `🎮 الألعاب المكملة: ${userStats.gamesPlayed}\n` +
+        `📖 القرآن المقروء: ${userStats.quranPages} صفحة`;
       break;
     }
-    // ...other cases if needed...
   }
+
+  await ctx.reply(message, { parse_mode: 'HTML' });
+  ctx.answerCbQuery('✅ تم');
+});
+
+
+// --- NEW BACKUP ACTIONS ---
+bot.action('new:backup', async (ctx) => {
+  const UIManager = require('./ui/keyboards');
+  const keyboard = UIManager.backupMenuKeyboard();
+  await ctx.editMessageText(
+    '📁 <b>نظام النسخ الاحتياطية</b>\n\n' +
+      '💾 <b>النسخ التلقائية</b> - يومياً تلقائياً\n' +
+      '📋 <b>قائمة النسخ</b> - كل النسخ المحفوظة\n' +
+      '🔄 <b>استعادة</b> - عودة لنسخة قديمة\n' +
+      '🗑️ <b>حذف</b> - حذف نسخة معينة\n\n' +
+      '✅ بيانات آمنة محمية تماماً',
+    { parse_mode: 'HTML', reply_markup: keyboard }
+  );
+});
+
+bot.action('backup:create', async (ctx) => {
+  await ctx.answerCbQuery('⏳ جاري إنشاء نسخة احتياطية...');
+  const backupSystem = require('./utils/backupSystem');
+  const result = await backupSystem.createBackup('manual');
+  await ctx.reply(result.message, { parse_mode: 'HTML' });
+});
+
+bot.action('backup:list', async (ctx) => {
+  const backupSystem = require('./utils/backupSystem');
+  const backups = await backupSystem.listBackups();
+  let message = '📋 <b>قائمة النسخ الاحتياطية</b>\n\n';
+  backups.forEach((b, i) => {
+    message += `${i + 1}. ${b.date}\n📊 ${b.size}\n\n`;
+  });
+  const keyboard = Markup.inlineKeyboard([[Markup.button.callback('⬅️ رجوع', 'new:backup')]]);
+  await ctx.reply(message, { parse_mode: 'HTML', reply_markup: keyboard });
 });
 
 // --- NEW CACHE ACTIONS ---
@@ -1359,9 +1362,45 @@ bot.action('eco:transfer', async (ctx) => {
     ctx.session = ctx.session || {};
     ctx.session.ecoAwait = { type: 'transfer' };
     await ctx.answerCbQuery('✅ جاهز');
-    // ...existing code...
+    await ctx.reply(
+      '💸 أدخل معرّف المستخدم الذي تريد التحويل له:\n\n(مثال: @username أو معرّفه الرقمي)'
+    );
+  } catch (error) {
+    console.error('Transfer error:', error);
+    ctx.answerCbQuery('❌ خطأ');
+  }
+});
 
-    const message = '💸 <b>تحويل العملات</b>\n\nاختر المستخدم أو أدخل المبلغ للتحويل.';
+bot.action('eco:auction', async (ctx) => {
+  try {
+    const AuctionManager = require('./economy/auctionManager');
+
+    ctx.session = ctx.session || {};
+    ctx.session.ecoAwait = { type: 'auction_select' };
+
+    const auctions = await AuctionManager.getActiveAuctions(bot);
+    const message = AuctionManager.formatAuctionList(auctions);
+
+    await ctx.editMessageText(message, {
+      parse_mode: 'HTML',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('📌 مزاداتي', 'eco:my_auctions')],
+        [Markup.button.callback('⬅️ رجوع', 'menu:economy')]
+      ])
+    });
+    ctx.answerCbQuery('✅');
+  } catch (error) {
+    console.error('Auction error:', error);
+    ctx.answerCbQuery('❌ خطأ');
+  }
+});
+
+bot.action('eco:my_auctions', async (ctx) => {
+  try {
+    const AuctionManager = require('./economy/auctionManager');
+    const auctions = await AuctionManager.getUserActiveBids(ctx.from.id);
+    const message = AuctionManager.formatUserAuctions(auctions, ctx.from.id);
+
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
       reply_markup: Markup.inlineKeyboard([
@@ -1523,16 +1562,14 @@ bot.action('achievements:view', async (ctx) => {
       const formatted = SmartNotifications.formatAchievements(achievements);
       message += formatted;
     } else {
-      message += '📊 لا توجد إنجازات جديدة حالياً';
+      message += '📊 لا توجد إنجازات جديدة حالياً\n';
       message += '💪 استمر في اللعب والقراءة لفتح إنجازات جديدة!';
     }
 
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [
-          [{ text: '⬅️ رجوع', callback_data: 'stats:view' }]
-        ]
+        inline_keyboard: [[{ text: '⬅️ رجوع', callback_data: 'stats:view' }]]
       }
     });
   } catch (error) {
@@ -3094,5 +3131,3 @@ app.listen(PORT, () => {
 startBot();
 
 module.exports = bot;
-// END OF FILE FIX: Add missing closing bracket
-
