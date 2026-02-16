@@ -1,4 +1,4 @@
-"const Markup = require('telegraf/markup');
+const Markup = require('telegraf/markup');
 
 class UIManager {
   // Check if user is owner
@@ -104,4 +104,4 @@ class UIManager {
   }
 }
 
-module.exports = UIManager;"
+module.exports = UIManager;
