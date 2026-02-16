@@ -36,11 +36,7 @@ class AuctionManager {
 
   static async broadcastMessage(bot, message) {
     if (!bot) return;
-    const users = await User.find({
-      isBanned: { $ne: true },
-      'notifications.enabled': true,
-      'notifications.auctionUpdates': true
-    }).select('userId');
+    const users = await User.find({ isBanned: { $ne: true } }).select('userId');
     for (const user of users) {
       if (!user.userId) continue;
       await bot.telegram.sendMessage(user.userId, message, { parse_mode: 'HTML' }).catch(() => {});
