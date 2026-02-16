@@ -28,6 +28,13 @@ class AdminHandlers {
     bot.action('owner:cleanup', AdminHandlers.handleCleanup);
     bot.action('owner:cleanup:confirm', AdminHandlers.handleCleanupConfirm);
 
+    // Backup action handlers
+    bot.action('backup:full', AdminHandlers.handleFullBackup);
+    bot.action('backup:users', AdminHandlers.handleUsersBackup);
+    bot.action('backup:list', AdminHandlers.handleBackupList);
+    bot.action('backup:stats', AdminHandlers.handleBackupStats);
+    bot.action('backup:incremental', AdminHandlers.handleIncrementalBackup);
+
     logger.info('Admin handlers registered successfully');
   }
 
@@ -114,7 +121,7 @@ class AdminHandlers {
   }
 
   /**
-   * Handle backup command
+   * Handle backup command - Enhanced with multiple options
    */
   static async handleBackupCommand(ctx) {
     try {
@@ -124,21 +131,195 @@ class AdminHandlers {
 
       const BackupSystem = require('../utils/backupSystem');
       const backup = new BackupSystem();
+
+      // عرض قائمة خيارات النسخ الاحتياطي
+      const keyboard = Markup.inlineKeyboard([
+        [
+          Markup.button.callback('📦 نسخ كامل', 'backup:full'),
+          Markup.button.callback('👥 نسخ المستخدمين', 'backup:users')
+        ],
+        [
+          Markup.button.callback('📋 قائمة النسخ', 'backup:list'),
+          Markup.button.callback('📊 الإحصائيات', 'backup:stats')
+        ],
+        [
+          Markup.button.callback('♻️ نسخ تدريجي', 'backup:incremental')
+        ]
+      ]);
+
+      await ctx.reply(
+        '💾 <b>نظام النسخ الاحتياطي</b>\n\n' +
+        'اختر نوع النسخة الاحتياطية:\n\n' +
+        '📦 <b>نسخ كامل:</b> جميع البيانات (مضغوط)\n' +
+        '👥 <b>نسخ المستخدمين:</b> بيانات المستخدمين فقط\n' +
+        '♻️ <b>نسخ تدريجي:</b> التغييرات منذ آخر نسخة\n' +
+        '📋 <b>قائمة النسخ:</b> عرض النسخ المتاحة\n' +
+        '📊 <b>الإحصائيات:</b> معلومات عن النسخ الاحتياطية',
+        { 
+          parse_mode: 'HTML',
+          reply_markup: keyboard.reply_markup
+        }
+      );
+
+      logger.logCommand('backup', ctx.from.id, true);
+    } catch (error) {
+      logger.error('Backup command error:', error);
+      ctx.reply(ERROR_MESSAGES.GENERIC);
+    }
+  }
+
+  /**
+   * Handle full backup action
+   */
+  static async handleFullBackup(ctx) {
+    try {
+      if (!AdminHandlers.isOwner(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ غير مصرح');
+      }
+
+      await ctx.answerCbQuery('⏳ جاري إنشاء نسخة احتياطية كاملة...');
+
+      const BackupSystem = require('../utils/backupSystem');
+      const backup = new BackupSystem();
+      const result = await backup.fullBackup(true); // with compression
+
+      if (result.success) {
+        const message = 
+          '✅ <b>نسخة احتياطية كاملة ناجحة!</b>\n\n' +
+          `📦 الملف: <code>${result.filename}</code>\n` +
+          `📊 الحجم: ${result.size}\n` +
+          `🗜️ مضغوط: نعم\n\n` +
+          '<b>الإحصائيات:</b>\n' +
+          `👥 المستخدمين: ${result.statistics.totalUsers}\n` +
+          `👥 المجموعات: ${result.statistics.totalGroups}\n` +
+          `💰 المعاملات: ${result.statistics.totalTransactions}\n` +
+          `🎮 إحصائيات الألعاب: ${result.statistics.totalGameStats}`;
+
+        await ctx.reply(message, { parse_mode: 'HTML' });
+        logger.success('Full backup completed', result.statistics);
+      } else {
+        await ctx.reply(`❌ فشل النسخ الاحتياطي: ${result.error}`);
+        logger.error('Full backup failed', result.error);
+      }
+    } catch (error) {
+      logger.error('Full backup action error:', error);
+      ctx.reply(ERROR_MESSAGES.GENERIC);
+    }
+  }
+
+  /**
+   * Handle users backup action
+   */
+  static async handleUsersBackup(ctx) {
+    try {
+      if (!AdminHandlers.isOwner(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ غير مصرح');
+      }
+
+      await ctx.answerCbQuery('⏳ جاري نسخ بيانات المستخدمين...');
+
+      const BackupSystem = require('../utils/backupSystem');
+      const backup = new BackupSystem();
       const result = await backup.backupUsers();
 
       if (result.success) {
         await ctx.reply(
-          `✅ تم النسخ الاحتياطية!\n📦 ${result.filename}\n👥 ${result.count} مستخدم`
+          `✅ تم النسخ الاحتياطي للمستخدمين!\n\n` +
+          `📦 ${result.filename}\n` +
+          `👥 ${result.count} مستخدم`
         );
-        logger.success('Backup completed', { count: result.count });
+        logger.success('Users backup completed', { count: result.count });
       } else {
-        await ctx.reply('❌ فشل النسخ الاحتياطية');
-        logger.error('Backup failed');
+        await ctx.reply('❌ فشل النسخ الاحتياطي');
+        logger.error('Users backup failed');
+      }
+    } catch (error) {
+      logger.error('Users backup action error:', error);
+      ctx.reply(ERROR_MESSAGES.GENERIC);
+    }
+  }
+
+  /**
+   * Handle backup list action
+   */
+  static async handleBackupList(ctx) {
+    try {
+      if (!AdminHandlers.isOwner(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ غير مصرح');
       }
 
-      logger.logCommand('backup', ctx.from.id, result.success);
+      await ctx.answerCbQuery();
+
+      const BackupSystem = require('../utils/backupSystem');
+      const backup = new BackupSystem();
+      const message = backup.formatBackupsList();
+
+      await ctx.reply(message, { parse_mode: 'HTML' });
     } catch (error) {
-      logger.error('Backup command error:', error);
+      logger.error('Backup list action error:', error);
+      ctx.reply(ERROR_MESSAGES.GENERIC);
+    }
+  }
+
+  /**
+   * Handle backup stats action
+   */
+  static async handleBackupStats(ctx) {
+    try {
+      if (!AdminHandlers.isOwner(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ غير مصرح');
+      }
+
+      await ctx.answerCbQuery();
+
+      const BackupSystem = require('../utils/backupSystem');
+      const backup = new BackupSystem();
+      const stats = backup.getBackupStats();
+
+      const message =
+        '📊 <b>إحصائيات النسخ الاحتياطية</b>\n\n' +
+        `📈 عدد النسخ: ${stats.backupCount}\n` +
+        `🔵 نسخ كاملة: ${stats.fullBackups}\n` +
+        `🗜️ نسخ مضغوطة: ${stats.compressedBackups}\n` +
+        `💾 الحجم الإجمالي: ${stats.totalSize}\n\n` +
+        `📅 أحدث نسخة: ${stats.newestBackup || 'لا يوجد'}\n` +
+        `📅 أقدم نسخة: ${stats.oldestBackup || 'لا يوجد'}`;
+
+      await ctx.reply(message, { parse_mode: 'HTML' });
+    } catch (error) {
+      logger.error('Backup stats action error:', error);
+      ctx.reply(ERROR_MESSAGES.GENERIC);
+    }
+  }
+
+  /**
+   * Handle incremental backup action
+   */
+  static async handleIncrementalBackup(ctx) {
+    try {
+      if (!AdminHandlers.isOwner(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ غير مصرح');
+      }
+
+      await ctx.answerCbQuery('⏳ جاري إنشاء نسخة احتياطية تدريجية...');
+
+      const BackupSystem = require('../utils/backupSystem');
+      const backup = new BackupSystem();
+      const result = await backup.incrementalBackup();
+
+      if (result.success) {
+        await ctx.reply(
+          `✅ نسخة احتياطية تدريجية ناجحة!\n\n` +
+          `📦 ${result.filename}\n` +
+          `📝 عدد التغييرات: ${result.changesCount}`
+        );
+        logger.success('Incremental backup completed', { changes: result.changesCount });
+      } else {
+        await ctx.reply(`❌ فشل النسخ التدريجي: ${result.error}`);
+        logger.error('Incremental backup failed', result.error);
+      }
+    } catch (error) {
+      logger.error('Incremental backup action error:', error);
       ctx.reply(ERROR_MESSAGES.GENERIC);
     }
   }
