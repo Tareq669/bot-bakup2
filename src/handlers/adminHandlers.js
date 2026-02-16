@@ -190,8 +190,8 @@ class AdminHandlers {
           `📊 الحجم: ${result.size}\n` +
           `🗜️ مضغوط: نعم\n\n` +
           '<b>الإحصائيات:</b>\n' +
-          `👥 المستخدمين: ${result.statistics.totalUsers}\n` +
-          `👥 المجموعات: ${result.statistics.totalGroups}\n` +
+          `👤 المستخدمين: ${result.statistics.totalUsers}\n` +
+          `🏢 المجموعات: ${result.statistics.totalGroups}\n` +
           `💰 المعاملات: ${result.statistics.totalTransactions}\n` +
           `🎮 إحصائيات الألعاب: ${result.statistics.totalGameStats}`;
 

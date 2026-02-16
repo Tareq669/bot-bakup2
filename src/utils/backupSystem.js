@@ -27,6 +27,11 @@ const { logger } = require('../utils/helpers');
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
 
+// Constants for file size calculations
+const BYTES_PER_KB = 1024;
+const BYTES_PER_MB = 1024 * 1024;
+const BYTES_PER_GB = 1024 * 1024 * 1024;
+
 class BackupSystem {
   constructor() {
     this.backupDir = path.join(__dirname, '../../backups');
@@ -48,7 +53,7 @@ class BackupSystem {
    */
   async backupUsers() {
     try {
-      const users = await User.find({});
+      const users = await User.find({}).lean();
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `users_backup_${timestamp}.json`;
@@ -296,11 +301,11 @@ class BackupSystem {
         .map(f => {
           const filepath = path.join(this.backupDir, f);
           const stats = fs.statSync(filepath);
-          const sizeKB = (stats.size / 1024).toFixed(2);
-          const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+          const sizeKB = (stats.size / BYTES_PER_KB).toFixed(2);
+          const sizeMB = (stats.size / BYTES_PER_MB).toFixed(2);
           return {
             filename: f,
-            size: stats.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`,
+            size: stats.size > BYTES_PER_MB ? `${sizeMB} MB` : `${sizeKB} KB`,
             sizeBytes: stats.size,
             date: stats.mtime.toLocaleString('ar-SA', { 
               timeZone: 'Asia/Riyadh',
@@ -340,9 +345,9 @@ class BackupSystem {
    */
   getFileSize(filepath) {
     const stats = fs.statSync(filepath);
-    const sizeKB = (stats.size / 1024).toFixed(2);
-    const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-    return stats.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+    const sizeKB = (stats.size / BYTES_PER_KB).toFixed(2);
+    const sizeMB = (stats.size / BYTES_PER_MB).toFixed(2);
+    return stats.size > BYTES_PER_MB ? `${sizeMB} MB` : `${sizeKB} KB`;
   }
 
   /**
@@ -456,10 +461,9 @@ class BackupSystem {
    */
   formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
-    const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+    const i = Math.floor(Math.log(bytes) / Math.log(BYTES_PER_KB));
+    return `${parseFloat((bytes / Math.pow(BYTES_PER_KB, i)).toFixed(2))} ${sizes[i]}`;
   }
 
   /**

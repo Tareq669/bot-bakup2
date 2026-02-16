@@ -319,5 +319,3 @@ describe('Backup System Tests', () => {
     });
   });
 });
-
-console.log('✅ Backup System Tests Ready');
